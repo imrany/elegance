@@ -90,7 +90,7 @@ func (pg *PostgresDB) GetProductBySlug(slug string) (*models.Product, error) {
 								p.images, p.sizes, p.colors, p.stock, p.featured, p.is_new, p.created_at, p.updated_at
 				FROM products p
 				LEFT JOIN categories c ON p.category_id = c.id
-		WHERE slug = $1
+		WHERE p.slug = $1
 	`, slug).Scan(&p.ID, &p.Name, &p.Slug, &p.Description, &p.Price, &p.OriginalPrice,
 		&p.CategoryID, &p.CategoryName, &images, &sizes, &colors, &p.Stock, &p.Featured, &p.IsNew,
 		&p.CreatedAt, &p.UpdatedAt)
