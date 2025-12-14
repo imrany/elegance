@@ -2,8 +2,14 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"log"
+	"math/rand"
+	"mime/multipart"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -13,6 +19,7 @@ import (
 	"github.com/imrany/ecommerce/internal/database"
 	"github.com/imrany/ecommerce/internal/models"
 	"github.com/imrany/ecommerce/pkg/utils"
+	"github.com/spf13/viper"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -41,6 +48,14 @@ func (h *AdminHandler) GetAllOrders(c *gin.Context) {
 // UpdateSetting updates a site setting (admin only)
 func (h *AdminHandler) UpdateSetting(c *gin.Context) {
 	key := c.Param("key")
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "User not authenticated", nil)
+		return
+	}
+
+	// Convert user_id to string
+	userIDStr := fmt.Sprintf("%v", userID)
 
 	var req struct {
 		Value string `json:"value" binding:"required"`
@@ -50,6 +65,37 @@ func (h *AdminHandler) UpdateSetting(c *gin.Context) {
 		log.Println("Failed to bind JSON:", err)
 		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid request body", err)
 		return
+	}
+
+	// delete previous logo if key is "store" and logo is not empty
+	if key == "store" && req.Value != "" {
+		// Retrieve the CURRENT setting from the database BEFORE updating it
+		setting, err := h.db.GetSiteSetting(key)
+		if err != nil {
+			// Log the error but continue; the setting might not exist yet, which is fine.
+			log.Printf("Failed to get existing site setting (key: %s): %v", key, err)
+		} else if setting != nil && setting.Value != "" {
+			// CRITICAL FIX: Only attempt to trim and unmarshal if 'setting' is not nil
+			currentValue := strings.TrimSpace(setting.Value)
+
+			// construct filename from setting.Value string which has logo {"logo":"/uploads/logo.png"}
+			var storeSetting struct {
+				Logo string `json:"logo"`
+			}
+
+			// We use currentValue (the old DB value) to find the old logo name
+			if err := json.Unmarshal([]byte(currentValue), &storeSetting); err != nil {
+				log.Printf("Failed to unmarshal store setting JSON (key: %s): %v", key, err)
+			} else if storeSetting.Logo != "" {
+				// Extract just the filename (e.g., "logo.png" from "/uploads/logo.png")
+				parsedLogoFilename := filepath.Base(storeSetting.Logo)
+
+				// Use the correctly parsed filename for deletion
+				if err := DeleteFile(userIDStr, parsedLogoFilename); err != nil {
+					log.Println("Failed to delete logo:", err)
+				}
+			}
+		}
 	}
 
 	// Update the setting
@@ -311,4 +357,109 @@ func (h *AdminHandler) CreateInitialAdmin(c *gin.Context) {
 		"admin": admin,
 		"token": tokenString,
 	})
+}
+
+func (h *AdminHandler) UploadImage(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "User not authenticated", nil)
+		return
+	}
+
+	// Convert user_id to string
+	userIDStr := fmt.Sprintf("%v", userID)
+
+	// Get the uploaded file
+	file, header, err := c.Request.FormFile("file") // Changed from "image" to match frontend
+	if err != nil {
+		if err == http.ErrMissingFile {
+			utils.ErrorResponse(c, http.StatusBadRequest, "No file uploaded or request Content-Type isn't multipart/form-data", err)
+			return
+		}
+		utils.ErrorResponse(c, http.StatusBadRequest, "Failed to read file from form", err)
+		return
+	}
+	defer file.Close()
+
+	// Validate file size (max 2MB)
+	if header.Size > 2*1024*1024 {
+		utils.ErrorResponse(c, http.StatusBadRequest, "File size must be less than 2MB", nil)
+		return
+	}
+
+	// Validate file type (images only)
+	contentType := header.Header.Get("Content-Type")
+	if !strings.HasPrefix(contentType, "image/") {
+		utils.ErrorResponse(c, http.StatusBadRequest, "File must be an image", nil)
+		return
+	}
+
+	// Generate unique filename to prevent overwrites
+	ext := filepath.Ext(header.Filename)
+	uniqueFilename := fmt.Sprintf("%d_%s%s", time.Now().Unix(), generateRandomString(8), ext)
+
+	// Upload image to user-specific directory
+	imageURL, err := StoreFile(file, userIDStr, uniqueFilename)
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to upload image", err)
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusCreated, gin.H{
+		"url": imageURL,
+	})
+}
+
+// Helper function to generate random string
+func generateRandomString(length int) string {
+	const charset = "abcdefghijklmnopqrstuvwxyz0123456789"
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = charset[rand.Intn(len(charset))]
+	}
+	return string(b)
+}
+
+func StoreFile(file multipart.File, userID, filename string) (string, error) {
+	// Create user-specific upload directory
+	uploadDir := filepath.Join(viper.GetString("upload-dir"), "images", userID)
+	if err := os.MkdirAll(uploadDir, 0755); err != nil {
+		return "", fmt.Errorf("failed to create upload directory: %w", err)
+	}
+
+	// Create file path
+	filePath := filepath.Join(uploadDir, filename)
+
+	// Create destination file
+	dst, err := os.Create(filePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to create file: %w", err)
+	}
+	defer dst.Close()
+
+	// Copy uploaded file to destination
+	if _, err := io.Copy(dst, file); err != nil {
+		return "", fmt.Errorf("failed to save file: %w", err)
+	}
+
+	// Return public URL (adjust based on your server configuration)
+	// Assuming you serve static files from /uploads
+	publicURL := fmt.Sprintf("/uploads/images/%s/%s", userID, filename)
+
+	return publicURL, nil
+}
+
+func DeleteFile(userID, filename string) error {
+	// Create user-specific upload directory
+	uploadDir := filepath.Join(viper.GetString("upload-dir"), "images", userID)
+
+	// Create file path
+	filePath := filepath.Join(uploadDir, filename)
+
+	// Delete file
+	if err := os.Remove(filePath); err != nil {
+		return fmt.Errorf("failed to delete file: %w", err)
+	}
+
+	return nil
 }

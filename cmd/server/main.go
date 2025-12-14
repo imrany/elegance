@@ -132,6 +132,7 @@ Supports PostgreSQL and SQLite databases.`,
 		"PORT":         "port",
 		"HOST":         "host",
 		"JWT_SECRET":   "jwt-secret",
+		"UPLOAD_DIR":   "upload-dir",
 	}
 
 	// Define flags
@@ -140,6 +141,7 @@ Supports PostgreSQL and SQLite databases.`,
 	rootCmd.PersistentFlags().String("jwt-secret", "secret", "JWT secret key for authentication")
 	rootCmd.PersistentFlags().String("db-type", "sqlite3", "Database type (sqlite3 or postgres)")
 	rootCmd.PersistentFlags().String("db-dsn", "./ecommerce.db", "Database DSN/connection string")
+	rootCmd.PersistentFlags().String("upload-dir", "./uploads", "Upload directory")
 
 	// Bind flags to viper and environment variables
 	for envKey, flagKey := range envBindings {

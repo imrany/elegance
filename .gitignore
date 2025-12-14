@@ -7,6 +7,10 @@
 bin/
 dist/
 
+# Ignore uploaded files
+uploads/**/*
+!uploads/**/.gitkeep
+
 # Test binary, built with `go test -c`
 *.test
 

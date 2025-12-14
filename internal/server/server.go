@@ -72,9 +72,9 @@ func New(cfg *Config, db database.DB) *Server {
 // setupRoutes configures all API routes
 func (s *Server) setupRoutes() {
 	// Health check
+	s.router.Static("/uploads", "./uploads")
 	s.router.GET("/health", s.handleHealth)
 	s.router.GET("/", s.handleRoot)
-
 	// API v1 routes
 	api := s.router.Group("/api")
 	{
@@ -148,6 +148,9 @@ func (s *Server) setupRoutes() {
 			admin.POST("/products", adminHandler.CreateProduct)
 			admin.PUT("/products/:id", adminHandler.UpdateProduct)
 			admin.DELETE("/products/:id", adminHandler.DeleteProduct)
+
+			// Images management
+			admin.POST("/upload/image", adminHandler.UploadImage)
 
 			// Settings management
 			admin.PUT("/settings/:key", adminHandler.UpdateSetting)

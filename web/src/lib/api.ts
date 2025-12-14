@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.DEV
+export const API_URL = import.meta.env.DEV
   ? "http://localhost:8080"
   : window.location.origin;
 
@@ -124,19 +124,29 @@ class ApiClient {
     options: RequestInit = {},
   ): Promise<T> {
     const token = this.getAuthToken();
+    // Start with authorization header if available
+    const headers: HeadersInit = {};
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
 
-    const headers: HeadersInit = {
-      "Content-Type": "application/json",
-      ...options.headers,
-    };
+    // when options.body is an instance of FormData.
+    if (!(options.body instanceof FormData)) {
+      headers["Content-Type"] = "application/json";
+    }
 
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }
 
+    const finalHeaders = {
+      ...headers, // Our computed Auth/Content-Type headers
+      ...options.headers, // Any extra headers passed in by the caller
+    };
+
     const response = await fetch(`${this.baseURL}${endpoint}`, {
       ...options,
-      headers,
+      headers: finalHeaders, // Use the final combined headers
     });
 
     const data = await response.json();
@@ -286,6 +296,18 @@ class ApiClient {
     return this.request<{ data: SiteSetting }>(`/api/admin/settings/${key}`, {
       method: "PUT",
       body: JSON.stringify({ value }),
+    });
+  }
+
+  // Admin: Upload logo
+  async uploadImage(formData: FormData) {
+    return this.request<{
+      data: {
+        url: string;
+      };
+    }>(`/api/admin/upload/image`, {
+      method: "POST",
+      body: formData,
     });
   }
 

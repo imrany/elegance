@@ -56,32 +56,38 @@ export function Footer() {
               {socialMediaLoading ? (
                 <Instagram className="h-5 w-5 animate-pulse" />
               ) : (
-                <a
-                  href={`https://instagram.com/${socialMediaValue?.["instagram"]}`}
-                  className="text-primary-foreground/70 transition-colors hover:text-accent"
-                >
-                  <Instagram className="h-5 w-5" />
-                </a>
+                socialMediaValue?.["instagram"] && (
+                  <a
+                    href={`https://instagram.com/${socialMediaValue?.["instagram"]}`}
+                    className="text-primary-foreground/70 transition-colors hover:text-accent"
+                  >
+                    <Instagram className="h-5 w-5" />
+                  </a>
+                )
               )}
               {socialMediaLoading ? (
                 <Facebook className="h-5 w-5 animate-pulse" />
               ) : (
-                <a
-                  href={`https://facebook.com/${socialMediaValue?.["facebook"]}`}
-                  className="text-primary-foreground/70 transition-colors hover:text-accent"
-                >
-                  <Facebook className="h-5 w-5" />
-                </a>
+                socialMediaValue?.["facebook"] && (
+                  <a
+                    href={`https://facebook.com/${socialMediaValue?.["facebook"]}`}
+                    className="text-primary-foreground/70 transition-colors hover:text-accent"
+                  >
+                    <Facebook className="h-5 w-5" />
+                  </a>
+                )
               )}
               {socialMediaLoading ? (
                 <Twitter className="h-5 w-5 animate-pulse" />
               ) : (
-                <a
-                  href={`https://twitter.com/${socialMediaValue?.["twitter"]}`}
-                  className="text-primary-foreground/70 transition-colors hover:text-accent"
-                >
-                  <Twitter className="h-5 w-5" />
-                </a>
+                socialMediaValue?.["twitter"] && (
+                  <a
+                    href={`https://twitter.com/${socialMediaValue?.["twitter"]}`}
+                    className="text-primary-foreground/70 transition-colors hover:text-accent"
+                  >
+                    <Twitter className="h-5 w-5" />
+                  </a>
+                )
               )}
             </div>
           </div>
@@ -179,7 +185,7 @@ export function Footer() {
         {/* Bottom */}
         <div className="mt-16 flex flex-col items-center justify-between gap-4 border-t border-primary-foreground/10 pt-8 md:flex-row">
           <p className="text-xs text-primary-foreground/50">
-            © {currentYear} Élégance. All rights reserved.
+            © {currentYear} {siteName}. All rights reserved.
           </p>
           <div className="flex gap-6">
             <Link
