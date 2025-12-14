@@ -1,16 +1,15 @@
 import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { getProducts } from "@/lib/supabase";
 import { ProductCard } from "@/components/products/ProductCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowRight } from "lucide-react";
+import { useProducts } from "@/hooks/useProducts";
 
 export function NewArrivals() {
-  const { data: products, isLoading } = useQuery({
-    queryKey: ["products", "new"],
-    queryFn: () => getProducts({ isNew: true, limit: 4 }),
-  });
+  const { data: products, isLoading } = useProducts(
+    { is_new: true, limit: 4 },
+    ["new"],
+  );
 
   return (
     <section className="py-20">
@@ -27,7 +26,7 @@ export function NewArrivals() {
           <Button
             asChild
             variant="ghost"
-            className="group gap-2 text-foreground hover:text-accent"
+            className="group gap-2 text-foreground hover:text-foreground"
           >
             <Link to="/category/new-arrivals">
               View All

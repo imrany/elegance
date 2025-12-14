@@ -48,10 +48,10 @@ A comprehensive guide to using the custom luxury design system with Tailwind CSS
 // Default text (almost black)
 <p className="text-foreground">
 
-// Muted/secondary text
+// Muted/secondary text (almost gray) 
 <p className="text-muted-foreground">
 
-// Text on dark backgrounds
+// Text on dark backgrounds (almost white)
 <p className="text-primary-foreground">
 
 // Gold text

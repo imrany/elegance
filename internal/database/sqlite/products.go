@@ -8,31 +8,38 @@ import (
 
 func (sq *SQLiteDB) GetProducts(filters models.ProductFilters) ([]models.Product, error) {
 	query := `
-		SELECT id, name, slug, description, price, original_price, category_id,
-			   images, sizes, colors, stock, featured, is_new, created_at, updated_at
-		FROM products WHERE 1=1
+	SELECT p.id, p.name, p.slug, p.description, p.price, p.original_price, p.category_id,
+					c.name AS category_name,
+					p.images, p.sizes, p.colors, p.stock, p.featured, p.is_new, p.created_at, p.updated_at
+	FROM products p
+	LEFT JOIN categories c ON p.category_id = c.id
+	WHERE 1=1
 	`
-	args := []interface{}{}
+	args := []any{}
 
 	if filters.CategoryID != nil {
-		query += " AND category_id = ?"
+		query += " AND p.category_id = ?" // Qualified column name
 		args = append(args, *filters.CategoryID)
 	}
 	if filters.Featured != nil {
-		query += " AND featured = ?"
+		query += " AND p.featured = ?" // Qualified column name
 		args = append(args, *filters.Featured)
 	}
 	if filters.IsNew != nil {
-		query += " AND is_new = ?"
+		query += " AND p.is_new = ?" // Qualified column name
 		args = append(args, *filters.IsNew)
 	}
 	if filters.Search != nil {
-		query += " AND (name LIKE ? OR description LIKE ?)"
+		query += " AND (p.name LIKE ? OR p.description LIKE ?)" // Qualified column names
 		searchTerm := "%" + *filters.Search + "%"
 		args = append(args, searchTerm, searchTerm)
 	}
 
-	query += " ORDER BY created_at DESC"
+	if filters.Order != "" {
+		query += " ORDER BY p." + filters.Order
+	} else {
+		query += " ORDER BY p.created_at DESC" // Qualified column name
+	}
 
 	if filters.Limit > 0 {
 		query += " LIMIT ?"
@@ -54,7 +61,7 @@ func (sq *SQLiteDB) GetProducts(filters models.ProductFilters) ([]models.Product
 		var p models.Product
 		var images, sizes, colors string
 		if err := rows.Scan(&p.ID, &p.Name, &p.Slug, &p.Description, &p.Price, &p.OriginalPrice,
-			&p.CategoryID, &images, &sizes, &colors, &p.Stock, &p.Featured, &p.IsNew,
+			&p.CategoryID, &p.CategoryName, &images, &sizes, &colors, &p.Stock, &p.Featured, &p.IsNew,
 			&p.CreatedAt, &p.UpdatedAt); err != nil {
 			return nil, err
 		}
@@ -70,12 +77,14 @@ func (sq *SQLiteDB) GetProductBySlug(slug string) (*models.Product, error) {
 	var p models.Product
 	var images, sizes, colors string
 	err := sq.db.QueryRow(`
-		SELECT id, name, slug, description, price, original_price, category_id,
-			   images, sizes, colors, stock, featured, is_new, created_at, updated_at
-		FROM products
+		SELECT p.id, p.name, p.slug, p.description, p.price, p.original_price, p.category_id,
+							c.name AS category_name,
+							p.images, p.sizes, p.colors, p.stock, p.featured, p.is_new, p.created_at, p.updated_at
+			FROM products p
+			LEFT JOIN categories c ON p.category_id = c.id
 		WHERE slug = ?
 	`, slug).Scan(&p.ID, &p.Name, &p.Slug, &p.Description, &p.Price, &p.OriginalPrice,
-		&p.CategoryID, &images, &sizes, &colors, &p.Stock, &p.Featured, &p.IsNew,
+		&p.CategoryID, &p.CategoryName, &images, &sizes, &colors, &p.Stock, &p.Featured, &p.IsNew,
 		&p.CreatedAt, &p.UpdatedAt)
 	if err != nil {
 		return nil, err

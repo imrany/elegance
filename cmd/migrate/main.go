@@ -22,6 +22,7 @@ func main() {
 
 	// Command-line flags
 	pflag.String("cmd", "status", "Migration command: up, down, status, reset")
+	pflag.Int("target", 0, "Migration target version: 1, 2, 3, etc.")
 	pflag.String("db-type", "", "Database type (postgres or sqlite)")
 	pflag.String("db-dsn", "", "Database connection string")
 
@@ -32,6 +33,7 @@ func main() {
 
 	// Set up viper to read from flags
 	viper.BindPFlag("cmd", pflag.Lookup("cmd"))
+	viper.BindPFlag("target", pflag.Lookup("target"))
 	viper.BindPFlag("db-type", pflag.Lookup("db-type"))
 	viper.BindPFlag("db-dsn", pflag.Lookup("db-dsn"))
 
@@ -41,6 +43,7 @@ func main() {
 
 	// Viper now manages the values, prioritize (flags > env > defaults)
 	command := viper.GetString("cmd")
+	target := viper.GetInt("target")
 	dbType := viper.GetString("db-type")
 	connStr := viper.GetString("db-dsn")
 
@@ -76,8 +79,14 @@ func main() {
 	// Execute command
 	switch command {
 	case "up":
-		if err := m.Up(); err != nil {
-			log.Fatalf("Migration failed: %v", err)
+		if target != 0 {
+			if err := m.Up(&target); err != nil {
+				log.Fatalf("Migration failed: %v", err)
+			}
+		} else {
+			if err := m.Up(nil); err != nil {
+				log.Fatalf("Migration failed: %v", err)
+			}
 		}
 	case "down":
 		if err := m.Down(); err != nil {
@@ -91,7 +100,7 @@ func main() {
 		fmt.Print("Are you sure you want to reset all migrations? (yes/no): ")
 		var confirm string
 		fmt.Scanln(&confirm)
-		if confirm != "yes" {
+		if confirm != "yes" && confirm != "y" {
 			log.Println("Reset cancelled")
 			os.Exit(0)
 		}

@@ -38,6 +38,7 @@ type Product struct {
 	Price         float64   `json:"price" db:"price"`
 	OriginalPrice *float64  `json:"original_price" db:"original_price"`
 	CategoryID    *string   `json:"category_id" db:"category_id"`
+	CategoryName  *string   `json:"category_name" db:"category_name"`
 	Images        []string  `json:"images" db:"images"`
 	Sizes         []string  `json:"sizes" db:"sizes"`
 	Colors        []string  `json:"colors" db:"colors"`
@@ -70,11 +71,11 @@ type Order struct {
 
 // SiteSetting represents a site configuration setting
 type SiteSetting struct {
-	ID        string          `json:"id" db:"id"`
-	Key       string          `json:"key" db:"key"`
-	Value     json.RawMessage `json:"value" db:"value"`
-	CreatedAt time.Time       `json:"created_at" db:"created_at"`
-	UpdatedAt time.Time       `json:"updated_at" db:"updated_at"`
+	ID        string    `json:"id" db:"id"`
+	Key       string    `json:"key" db:"key"`
+	Value     string    `json:"value" db:"value"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 }
 
 // ProductFilters holds filter options for product queries
@@ -85,4 +86,10 @@ type ProductFilters struct {
 	Search     *string
 	Limit      int
 	Offset     int
+	Order      string
+}
+
+type SetupStatus struct {
+	SetupComplete bool `json:"setup_complete" db:"setup_complete"`
+	HasAdmin      bool `json:"has_admin" db:"has_admin"`
 }

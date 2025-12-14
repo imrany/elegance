@@ -50,7 +50,7 @@ func runServer() {
 		log.Fatal("Database DSN (db-dsn) is required")
 	}
 
-	log.Println("📡 Connecting to database...")
+	log.Println("Connecting to database...")
 
 	// Initialize database connection for migrations
 	sqlDB, err := openDatabase(DBType, DBDSN)
@@ -59,31 +59,31 @@ func runServer() {
 	}
 
 	// Run migrations automatically
-	log.Println("🔄 Running database migrations...")
+	log.Println("Running database migrations...")
 	m, err := migrator.New(sqlDB, DBType)
 	if err != nil {
 		sqlDB.Close()
 		log.Fatalf("Failed to create migrator: %v", err)
 	}
 
-	if err := m.Up(); err != nil {
+	if err := m.Up(nil); err != nil {
 		sqlDB.Close()
 		log.Fatalf("Failed to run migrations: %v", err)
 	}
-	log.Println("✅ Migrations completed successfully")
+	log.Println("Migrations completed successfully")
 
 	// Close the sql.DB connection used for migrations
 	sqlDB.Close()
 
 	// Now initialize the application database layer
-	log.Println("🔌 Initializing application database layer...")
+	log.Println("Initializing application database layer...")
 	db, err := database.New(DBType, DBDSN)
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 	defer db.Close()
 
-	log.Printf("✅ Connected to %s database successfully", DBType)
+	log.Printf("Connected to %s database successfully", DBType)
 
 	// Create and start server
 	srv := server.New(cfg, db)
@@ -111,7 +111,7 @@ func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Println("⚠️  No .env file found, using environment variables and flags")
 	} else {
-		log.Println("✅ .env file loaded successfully")
+		log.Println(".env file loaded successfully")
 	}
 
 	// Root command with Cobra

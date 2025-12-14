@@ -20,8 +20,8 @@ A robust, database-agnostic migration system for PostgreSQL and SQLite.
 
 ```
 ecommerce-backend/
-├── cmd/
-│   └── migrate/
+├── cmd
+│   └──/main.go migrate/
 │       └── main.go                 # Migration CLI tool
 ├── internal/
 │   └── migrator/
@@ -68,7 +68,7 @@ Format: `{version}_{name}_{database}.{direction}.sql`
 
 ```bash
 # Build
-go build -o bin/migrate cmd/migrate/main.go
+go build -o bin/migrate cmdmigrate//main.gomain.go
 
 # Or use Makefile
 make build-migrate
@@ -84,25 +84,25 @@ export DB_TYPE=postgres
 export DATABASE_URL="postgres://user:pass@localhost:5432/ecommerce?sslmode=disable"
 
 # Run migrations
-./bin/migrate --cmd=up
+go run cmd/migrate/main.go --cmd=up
 
 # Or for SQLite
 export DB_TYPE=sqlite
 export DATABASE_URL="./ecommerce.db"
-./bin/migrate --cmd=up
+go run cmd/migrate/main.go --cmd=up
 ```
 
 #### **Using Command-Line Flags**
 
 ```bash
 # PostgreSQL
-./bin/migrate \
+go run cmd/migrate/main.go \
   --cmd=up \
   --db-type=postgres \
   --db-dsn="postgres://user:pass@localhost:5432/ecommerce?sslmode=disable"
 
 # SQLite
-./bin/migrate \
+go run cmd/migrate/main.go \
   --cmd=up \
   --db-type=sqlite \
   --db-dsn="./ecommerce.db"
@@ -112,17 +112,17 @@ export DATABASE_URL="./ecommerce.db"
 
 #### **up** - Apply pending migrations
 ```bash
-./bin/migrate --cmd=up
+go run cmd/migrate/main.go --cmd=up
 ```
 
 #### **down** - Rollback last migration
 ```bash
-./bin/migrate --cmd=down
+go run cmd/migrate/main.go --cmd=down
 ```
 
 #### **status** - Show migration status
 ```bash
-./bin/migrate --cmd=status
+go run cmd/migrate/main.go --cmd=status
 ```
 
 Output:
@@ -139,7 +139,7 @@ Total: 2 | Applied: 1 | Pending: 1
 
 #### **reset** - Rollback all migrations
 ```bash
-./bin/migrate --cmd=reset
+go run cmd/migrate/main.go --cmd=reset
 ```
 *This will ask for confirmation before proceeding*
 
@@ -338,7 +338,7 @@ DELETE FROM site_settings WHERE key IN (
 
 ## 🔧 Integration with Main Application
 
-### **Update cmd/server/main.go**
+### **Update cmdserver/m/main.goain.go**
 
 Add automatic migration on startup:
 
@@ -419,34 +419,34 @@ Add migration targets:
 build-migrate:
 	@echo "Building migration tool..."
 	@mkdir -p $(BUILD_DIR)
-	$(GO) build $(GOFLAGS) -o $(BUILD_DIR)/migrate cmd/migrate/main.go
+	$(GO) build $(GOFLAGS) -o $(BUILD_DIR)/migrate cmdmigrate//main.gomain.go
 	@echo "✓ Migration tool built: $(BUILD_DIR)/migrate"
 
 # Run migrations
 migrate-up:
 	@echo "Running migrations..."
-	./bin/migrate --cmd=up
+	go run cmd/migrate/main.go --cmd=up
 
 # Rollback last migration
 migrate-down:
 	@echo "Rolling back migration..."
-	./bin/migrate --cmd=down
+	go run cmd/migrate/main.go --cmd=down
 
 # Show migration status
 migrate-status:
 	@echo "Checking migration status..."
-	./bin/migrate --cmd=status
+	go run cmd/migrate/main.go --cmd=status
 
 # Reset all migrations
 migrate-reset:
 	@echo "Resetting migrations..."
-	./bin/migrate --cmd=reset
+	go run cmd/migrate/main.go --cmd=reset
 
 # Fresh database (reset + migrate)
 migrate-fresh:
 	@echo "Fresh migration..."
-	./bin/migrate --cmd=reset || true
-	./bin/migrate --cmd=up
+	go run cmd/migrate/main.go --cmd=reset || true
+	go run cmd/migrate/main.go --cmd=up
 ```
 
 ---
@@ -460,39 +460,39 @@ migrate-fresh:
 make build-migrate
 
 # PostgreSQL
-./bin/migrate \
+go run cmd/migrate/main.go \
   --cmd=up \
   --db-type=postgres \
   --db-dsn="postgres://user:pass@localhost:5432/test_db"
 
 # SQLite
-./bin/migrate \
+go run cmd/migrate/main.go \
   --cmd=up \
   --db-type=sqlite \
   --db-dsn="./test.db"
 
 # Check status
-./bin/migrate --cmd=status --db-type=sqlite --db-dsn="./test.db"
+go run cmd/migrate/main.go --cmd=status --db-type=sqlite --db-dsn="./test.db"
 ```
 
 ### **Test Down Migrations**
 
 ```bash
 # Rollback last migration
-./bin/migrate --cmd=down --db-type=sqlite --db-dsn="./test.db"
+go run cmd/migrate/main.go --cmd=down --db-type=sqlite --db-dsn="./test.db"
 
 # Verify
-./bin/migrate --cmd=status --db-type=sqlite --db-dsn="./test.db"
+go run cmd/migrate/main.go --cmd=status --db-type=sqlite --db-dsn="./test.db"
 ```
 
 ### **Test Reset**
 
 ```bash
 # Reset all
-./bin/migrate --cmd=reset --db-type=sqlite --db-dsn="./test.db"
+go run cmd/migrate/main.go --cmd=reset --db-type=sqlite --db-dsn="./test.db"
 
 # Should show no migrations applied
-./bin/migrate --cmd=status --db-type=sqlite --db-dsn="./test.db"
+go run cmd/migrate/main.go --cmd=status --db-type=sqlite --db-dsn="./test.db"
 ```
 
 ---
@@ -551,16 +551,16 @@ touch internal/migrator/migrations/003_add_reviews_sqlite.down.sql
 make build-migrate
 
 # 4. Test locally (SQLite)
-./bin/migrate --cmd=up --db-type=sqlite --db-dsn="./test.db"
+go run cmd/migrate/main.go --cmd=up --db-type=sqlite --db-dsn="./test.db"
 
 # 5. Check status
-./bin/migrate --cmd=status --db-type=sqlite --db-dsn="./test.db"
+go run cmd/migrate/main.go --cmd=status --db-type=sqlite --db-dsn="./test.db"
 
 # 6. If good, apply to production (PostgreSQL)
-./bin/migrate --cmd=up --db-type=postgres --db-dsn="$PROD_DB_URL"
+go run cmd/migrate/main.go --cmd=up --db-type=postgres --db-dsn="$PROD_DB_URL"
 
 # 7. Verify
-./bin/migrate --cmd=status --db-type=postgres --db-dsn="$PROD_DB_URL"
+go run cmd/migrate/main.go --cmd=status --db-type=postgres --db-dsn="$PROD_DB_URL"
 ```
 
 ---

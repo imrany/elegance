@@ -1,11 +1,11 @@
 import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { getCategories, Category } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import categoryWomen from "@/assets/category-women.jpg";
 import categoryMen from "@/assets/category-men.jpg";
 import categoryAccessories from "@/assets/category-accessories.jpg";
+import { useCategories } from "@/hooks/useCategories";
+import { Category } from "@/lib/api";
 
 const categoryImages: Record<string, string> = {
   women: categoryWomen,
@@ -14,10 +14,7 @@ const categoryImages: Record<string, string> = {
 };
 
 export function CategoryGrid() {
-  const { data: categories, isLoading } = useQuery({
-    queryKey: ["categories"],
-    queryFn: getCategories,
-  });
+  const { data: categories, isLoading } = useCategories();
 
   if (isLoading) {
     return (
@@ -35,7 +32,7 @@ export function CategoryGrid() {
 
   // Filter to show main categories (not new arrivals for this grid)
   const mainCategories = categories?.filter(
-    (cat) => cat.slug !== "new-arrivals"
+    (cat) => cat.slug !== "new-arrivals",
   );
 
   return (
@@ -69,7 +66,7 @@ interface CategoryCardProps {
 
 function CategoryCard({ category, className = "" }: CategoryCardProps) {
   const imageUrl = categoryImages[category.slug] || categoryWomen;
-  
+
   return (
     <Link
       to={`/category/${category.slug}`}

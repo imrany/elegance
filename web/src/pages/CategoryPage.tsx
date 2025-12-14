@@ -1,31 +1,31 @@
 import { useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 import { Layout } from "@/components/layout/Layout";
 import { ProductCard } from "@/components/products/ProductCard";
-import { getProducts, getCategories } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useCategories } from "@/hooks/useCategories";
+import { useProducts } from "@/hooks/useProducts";
+import { useEffect } from "react";
 
 export default function CategoryPage() {
   const { slug } = useParams<{ slug: string }>();
 
-  const { data: categories } = useQuery({
-    queryKey: ["categories"],
-    queryFn: getCategories,
-  });
+  // Fetch categories
+  const { data: categories, error } = useCategories();
 
   const category = categories?.find((cat) => cat.slug === slug);
 
-  const { data: products, isLoading } = useQuery({
-    queryKey: ["products", "category", slug],
-    queryFn: () => {
-      if (slug === "new-arrivals") {
-        return getProducts({ isNew: true });
-      }
-      return getProducts({ categorySlug: slug });
-    },
-    enabled: !!slug,
+  const { data: products, isLoading } = useProducts({
+    is_new: slug === "new-arrivals" && "true",
+    category_id: category?.id || undefined,
   });
 
+  useEffect(() => {
+    scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "smooth",
+    });
+  }, []);
   return (
     <Layout>
       {/* Hero */}
@@ -36,7 +36,10 @@ export default function CategoryPage() {
               Collection
             </p>
             <h1 className="mt-4 font-serif text-4xl font-light text-foreground md:text-5xl">
-              {category?.name || slug?.replace("-", " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+              {category?.name ||
+                slug
+                  ?.replace("-", " ")
+                  .replace(/\b\w/g, (l) => l.toUpperCase())}
             </h1>
             {category?.description && (
               <p className="mt-4 text-lg text-muted-foreground">

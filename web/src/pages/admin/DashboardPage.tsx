@@ -1,55 +1,52 @@
 import { useQuery } from "@tanstack/react-query";
 import { Package, ShoppingCart, TrendingUp, Users } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { formatPrice } from "@/lib/supabase";
+import { api } from "@/lib/api";
+import { formatPrice } from "@/lib/utils";
+import { useProducts } from "@/hooks/useProducts";
 
 export default function DashboardPage() {
-  const { data: productCount } = useQuery({
-    queryKey: ["admin-product-count"],
+  // Fetch product count
+  const { data: products } = useProducts();
+
+  // Fetch orders for statistics
+  const { data: orders } = useQuery({
+    queryKey: ["admin-orders"],
     queryFn: async () => {
-      const { count } = await supabase
-        .from("products")
-        .select("*", { count: "exact", head: true });
-      return count || 0;
+      const response = await api.getAllOrders();
+      return response.data;
     },
   });
 
-  const { data: orderStats } = useQuery({
-    queryKey: ["admin-order-stats"],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("orders")
-        .select("total, status");
-      
-      const totalRevenue = data?.reduce((sum, order) => sum + Number(order.total), 0) || 0;
-      const pendingOrders = data?.filter((o) => o.status === "pending").length || 0;
-      
-      return { totalRevenue, pendingOrders, totalOrders: data?.length || 0 };
-    },
-  });
+  // Calculate stats
+  const productCount = products?.length || 0;
+  const totalOrders = orders?.length || 0;
+  const pendingOrders =
+    orders?.filter((o) => o.status === "pending").length || 0;
+  const totalRevenue =
+    orders?.reduce((sum, order) => sum + Number(order.total), 0) || 0;
 
   const stats = [
     {
       name: "Total Products",
-      value: productCount?.toString() || "0",
+      value: productCount.toString(),
       icon: Package,
       color: "bg-blue-500/10 text-blue-500",
     },
     {
       name: "Total Orders",
-      value: orderStats?.totalOrders.toString() || "0",
+      value: totalOrders.toString(),
       icon: ShoppingCart,
       color: "bg-green-500/10 text-green-500",
     },
     {
       name: "Pending Orders",
-      value: orderStats?.pendingOrders.toString() || "0",
+      value: pendingOrders.toString(),
       icon: Users,
       color: "bg-orange-500/10 text-orange-500",
     },
     {
       name: "Total Revenue",
-      value: formatPrice(orderStats?.totalRevenue || 0),
+      value: formatPrice(totalRevenue),
       icon: TrendingUp,
       color: "bg-purple-500/10 text-purple-500",
     },
@@ -94,7 +91,8 @@ export default function DashboardPage() {
           Quick Actions
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Manage your store from the sidebar navigation. Configure WhatsApp and email settings in the Settings page.
+          Manage your store from the sidebar navigation. Configure WhatsApp,
+          social media, and store settings in the Settings page.
         </p>
       </div>
     </div>

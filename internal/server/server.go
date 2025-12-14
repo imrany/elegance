@@ -10,7 +10,6 @@ import (
 	"github.com/imrany/ecommerce/internal/database"
 	"github.com/imrany/ecommerce/internal/handlers"
 	"github.com/imrany/ecommerce/internal/middleware"
-	"github.com/spf13/viper"
 )
 
 type ServerConfig struct {
@@ -20,7 +19,7 @@ type ServerConfig struct {
 
 type Config struct {
 	Server    ServerConfig
-	DB        database.DB
+	DBType    string
 	JWTSecret string
 }
 
@@ -29,6 +28,7 @@ type Server struct {
 	config  *Config
 	router  *gin.Engine
 	handler *handlers.Handler
+	db      database.DB
 }
 
 // New creates a new server instance
@@ -62,6 +62,7 @@ func New(cfg *Config, db database.DB) *Server {
 		config:  cfg,
 		router:  router,
 		handler: handler,
+		db:      db,
 	}
 
 	srv.setupRoutes()
@@ -78,9 +79,20 @@ func (s *Server) setupRoutes() {
 	api := s.router.Group("/api")
 	{
 		// Auth endpoints (public)
-		authHandler := handlers.NewAuthHandler(s.config.DB, s.config.JWTSecret)
-		api.POST("/auth/signup", authHandler.SignUp)
-		api.POST("/auth/signin", authHandler.SignIn)
+		authHandler := handlers.NewAuthHandler(s.db, s.config.JWTSecret)
+		auth := api.Group("/auth")
+		{
+			auth.POST("/signup", authHandler.SignUp)
+			auth.POST("/signin", authHandler.SignIn)
+		}
+
+		// Setup endpoints (public)
+		setup := api.Group("/setup")
+		{
+			setupHandler := handlers.NewAdminHandler(s.db, s.config.JWTSecret)
+			setup.GET("/status", setupHandler.GetSetupStatus)
+			setup.POST("/admin", setupHandler.CreateInitialAdmin)
+		}
 
 		// Categories (public)
 		categories := api.Group("/categories")
@@ -120,9 +132,25 @@ func (s *Server) setupRoutes() {
 		admin.Use(middleware.AuthMiddleware(s.config.JWTSecret), middleware.AdminOnly())
 		{
 			// Add admin-only routes here
-			admin.GET("/users", func(c *gin.Context) {
-				c.JSON(http.StatusOK, gin.H{"message": "Admin only"})
-			})
+			adminHandler := handlers.NewAdminHandler(s.db, s.config.JWTSecret)
+
+			// User management
+			admin.GET("/users", adminHandler.GetAllUsers)
+			admin.PUT("/users/:id/role", adminHandler.UpdateUserRole)
+			admin.DELETE("/users/:id", adminHandler.DeleteUser)
+
+			// Orders management
+			admin.GET("/orders", adminHandler.GetAllOrders)
+			admin.PUT("/orders/:id/status", adminHandler.UpdateOrderStatus)
+
+			// Products management
+			admin.GET("/products", adminHandler.GetAllProducts)
+			admin.POST("/products", adminHandler.CreateProduct)
+			admin.PUT("/products/:id", adminHandler.UpdateProduct)
+			admin.DELETE("/products/:id", adminHandler.DeleteProduct)
+
+			// Settings management
+			admin.PUT("/settings/:key", adminHandler.UpdateSetting)
 		}
 	}
 }
@@ -132,7 +160,7 @@ func (s *Server) handleHealth(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status":    "ok",
 		"timestamp": time.Now().Unix(),
-		"database":  viper.GetString("db-type"),
+		"database":  s.config.DBType,
 		"version":   "1.0.0",
 	})
 }

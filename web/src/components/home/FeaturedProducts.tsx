@@ -1,13 +1,15 @@
-import { useQuery } from "@tanstack/react-query";
-import { getProducts } from "@/lib/supabase";
 import { ProductCard } from "@/components/products/ProductCard";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useProducts } from "@/hooks/useProducts";
 
 export function FeaturedProducts() {
-  const { data: products, isLoading } = useQuery({
-    queryKey: ["products", "featured"],
-    queryFn: () => getProducts({ featured: true, limit: 4 }),
-  });
+  const { data: products, isLoading } = useProducts(
+    {
+      featured: true,
+      limit: 4,
+    },
+    ["featured"],
+  );
 
   return (
     <section className="bg-secondary/50 py-20">

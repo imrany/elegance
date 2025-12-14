@@ -1,14 +1,14 @@
 import { useParams, Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Layout } from "@/components/layout/Layout";
-import { getProductBySlug, formatPrice } from "@/lib/supabase";
+import { formatPrice } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Heart, Minus, Plus, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/contexts/CartContext";
+import { useProduct } from "@/hooks/useProducts";
 
 export default function ProductPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -19,11 +19,7 @@ export default function ProductPage() {
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
 
-  const { data: product, isLoading } = useQuery({
-    queryKey: ["product", slug],
-    queryFn: () => getProductBySlug(slug!),
-    enabled: !!slug,
-  });
+  const { data: product, isLoading } = useProduct(slug);
 
   if (isLoading) {
     return (
@@ -46,8 +42,13 @@ export default function ProductPage() {
     return (
       <Layout>
         <div className="container py-24 text-center">
-          <h1 className="font-serif text-3xl text-foreground">Product not found</h1>
-          <Button asChild className="mt-6">
+          <h1 className="font-serif text-3xl text-foreground">
+            Product not found
+          </h1>
+          <Button
+            asChild
+            className="mt-6 text-primary underline hover:text-primary/90"
+          >
             <Link to="/">Return Home</Link>
           </Button>
         </div>
@@ -55,7 +56,8 @@ export default function ProductPage() {
     );
   }
 
-  const hasDiscount = product.original_price && product.original_price > product.price;
+  const hasDiscount =
+    product.original_price && product.original_price > product.price;
 
   const handleAddToCart = () => {
     if (!selectedSize && product.sizes && product.sizes.length > 0) {
@@ -72,7 +74,12 @@ export default function ProductPage() {
       });
       return;
     }
-    addItem(product, quantity, selectedSize || undefined, selectedColor || undefined);
+    addItem(
+      product,
+      quantity,
+      selectedSize || undefined,
+      selectedColor || undefined,
+    );
     toast({
       title: "Added to bag",
       description: `${product.name} has been added to your shopping bag.`,
@@ -85,15 +92,17 @@ export default function ProductPage() {
       <div className="border-b border-border">
         <div className="container py-4">
           <nav className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Link to="/" className="hover:text-foreground">Home</Link>
+            <Link to="/" className="hover:text-foreground">
+              Home
+            </Link>
             <ChevronRight className="h-4 w-4" />
-            {product.category && (
+            {product.category_id && (
               <>
                 <Link
-                  to={`/category/${product.category.slug}`}
+                  to={`/category/${product.category_id}`}
                   className="hover:text-foreground"
                 >
-                  {product.category.name}
+                  Category
                 </Link>
                 <ChevronRight className="h-4 w-4" />
               </>
@@ -109,12 +118,15 @@ export default function ProductPage() {
           <div className="space-y-4">
             <div className="aspect-[3/4] overflow-hidden bg-muted">
               <img
-                src={product.images[selectedImage] || "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800"}
+                src={
+                  product.images?.[selectedImage] ||
+                  "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800"
+                }
                 alt={product.name}
                 className="h-full w-full object-cover"
               />
             </div>
-            {product.images.length > 1 && (
+            {product.images && product.images.length > 1 && (
               <div className="flex gap-3">
                 {product.images.map((image, index) => (
                   <button
@@ -122,7 +134,9 @@ export default function ProductPage() {
                     onClick={() => setSelectedImage(index)}
                     className={cn(
                       "aspect-square w-20 overflow-hidden border-2 transition-colors",
-                      selectedImage === index ? "border-accent" : "border-transparent"
+                      selectedImage === index
+                        ? "border-accent"
+                        : "border-transparent",
                     )}
                   >
                     <img
@@ -139,16 +153,6 @@ export default function ProductPage() {
           {/* Product info */}
           <div className="lg:sticky lg:top-32 lg:self-start">
             <div className="space-y-6">
-              {/* Category */}
-              {product.category && (
-                <Link
-                  to={`/category/${product.category.slug}`}
-                  className="text-sm font-medium tracking-luxury uppercase text-accent hover:text-accent/80"
-                >
-                  {product.category.name}
-                </Link>
-              )}
-
               {/* Title */}
               <h1 className="font-serif text-3xl font-light text-foreground md:text-4xl">
                 {product.name}
@@ -167,15 +171,20 @@ export default function ProductPage() {
               </div>
 
               {/* Description */}
-              <p className="text-muted-foreground leading-relaxed">
-                {product.description}
-              </p>
+              {product.description && (
+                <p className="text-muted-foreground leading-relaxed">
+                  {product.description}
+                </p>
+              )}
 
               {/* Colors */}
-              {product.colors.length > 0 && (
+              {product.colors && product.colors.length > 0 && (
                 <div className="space-y-3">
                   <label className="text-sm font-medium text-foreground">
-                    Color: <span className="text-muted-foreground">{selectedColor}</span>
+                    Color:{" "}
+                    <span className="text-muted-foreground">
+                      {selectedColor || "Select"}
+                    </span>
                   </label>
                   <div className="flex flex-wrap gap-2">
                     {product.colors.map((color) => (
@@ -186,7 +195,7 @@ export default function ProductPage() {
                           "rounded-none border px-4 py-2 text-sm transition-colors",
                           selectedColor === color
                             ? "border-accent bg-accent text-accent-foreground"
-                            : "border-border hover:border-foreground"
+                            : "border-border hover:border-foreground",
                         )}
                       >
                         {color}
@@ -197,10 +206,13 @@ export default function ProductPage() {
               )}
 
               {/* Sizes */}
-              {product.sizes.length > 0 && (
+              {product.sizes && product.sizes.length > 0 && (
                 <div className="space-y-3">
                   <label className="text-sm font-medium text-foreground">
-                    Size: <span className="text-muted-foreground">{selectedSize}</span>
+                    Size:{" "}
+                    <span className="text-muted-foreground">
+                      {selectedSize || "Select"}
+                    </span>
                   </label>
                   <div className="flex flex-wrap gap-2">
                     {product.sizes.map((size) => (
@@ -211,7 +223,7 @@ export default function ProductPage() {
                           "min-w-[48px] rounded-none border px-4 py-2 text-sm transition-colors",
                           selectedSize === size
                             ? "border-accent bg-accent text-accent-foreground"
-                            : "border-border hover:border-foreground"
+                            : "border-border hover:border-foreground",
                         )}
                       >
                         {size}
@@ -223,25 +235,33 @@ export default function ProductPage() {
 
               {/* Quantity */}
               <div className="space-y-3">
-                <label className="text-sm font-medium text-foreground">Quantity</label>
+                <label className="text-sm font-medium text-foreground">
+                  Quantity
+                </label>
                 <div className="flex items-center gap-4">
                   <div className="flex items-center border border-border">
                     <button
                       onClick={() => setQuantity(Math.max(1, quantity - 1))}
                       className="p-3 transition-colors hover:bg-muted"
+                      disabled={quantity <= 1}
                     >
                       <Minus className="h-4 w-4" />
                     </button>
                     <span className="w-12 text-center">{quantity}</span>
                     <button
-                      onClick={() => setQuantity(quantity + 1)}
+                      onClick={() =>
+                        setQuantity(Math.min(product.stock, quantity + 1))
+                      }
                       className="p-3 transition-colors hover:bg-muted"
+                      disabled={quantity >= product.stock}
                     >
                       <Plus className="h-4 w-4" />
                     </button>
                   </div>
                   <span className="text-sm text-muted-foreground">
-                    {product.stock > 0 ? `${product.stock} in stock` : "Out of stock"}
+                    {product.stock > 0
+                      ? `${product.stock} in stock`
+                      : "Out of stock"}
                   </span>
                 </div>
               </div>

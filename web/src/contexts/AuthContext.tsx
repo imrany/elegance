@@ -1,106 +1,156 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { User, Session } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+import { api, User } from "@/lib/api";
 
 interface AuthContextType {
   user: User | null;
-  session: Session | null;
   isAdmin: boolean;
   isLoading: boolean;
-  signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signOut: () => Promise<void>;
+  signIn: (
+    email: string,
+    password: string,
+  ) => Promise<{ error?: { message: string } }>;
+  signUp: (
+    email: string,
+    password: string,
+    first_name: string,
+    last_name: string,
+    phone_number: string,
+  ) => Promise<{ error?: { message: string } }>;
+  createInitialAdmin: (
+    email: string,
+    password: string,
+    first_name: string,
+    last_name: string,
+    phone_number: string,
+  ) => Promise<{ error?: { message: string } }>;
+  signOut: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Load user on mount
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        // Defer role check with setTimeout to avoid deadlock
-        if (session?.user) {
-          setTimeout(() => {
-            checkAdminRole(session.user.id);
-          }, 0);
-        } else {
-          setIsAdmin(false);
-        }
+    const loadUser = async () => {
+      const token = localStorage.getItem("auth_token");
+      if (!token) {
+        setIsLoading(false);
+        return;
       }
-    );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        checkAdminRole(session.user.id);
+      try {
+        const { data } = await api.getMe();
+        setUser(data.user);
+      } catch (error) {
+        console.error("Failed to load user:", error);
+        localStorage.removeItem("auth_token");
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
-    });
+    };
 
-    return () => subscription.unsubscribe();
+    loadUser();
   }, []);
 
-  const checkAdminRole = async (userId: string) => {
-    const { data } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId)
-      .eq("role", "admin")
-      .maybeSingle();
-    
-    setIsAdmin(!!data);
-  };
-
-  const signUp = async (email: string, password: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-      },
-    });
-    
-    return { error: error as Error | null };
-  };
-
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    
-    return { error: error as Error | null };
+    try {
+      const response = await api.signIn(email, password);
+      localStorage.setItem("auth_token", response.data.token);
+      setUser(response.data.user);
+      return {};
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      return {
+        error: {
+          message:
+            error?.response?.data?.error ||
+            error?.message ||
+            "Failed to sign in",
+        },
+      };
+    }
   };
 
-  const signOut = async () => {
-    await supabase.auth.signOut();
-    setIsAdmin(false);
+  const signUp = async (
+    email: string,
+    password: string,
+    first_name: string,
+    last_name: string,
+    phone_number: string,
+  ) => {
+    try {
+      await api.signUp(email, password, first_name, last_name, phone_number);
+      return {};
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      return {
+        error: {
+          message:
+            error?.response?.data?.error ||
+            error?.message ||
+            "Failed to create account",
+        },
+      };
+    }
+  };
+
+  const signOut = () => {
+    localStorage.removeItem("auth_token");
+    setUser(null);
+  };
+
+  const createInitialAdmin = async (
+    email: string,
+    password: string,
+    firstName: string,
+    lastName: string,
+    phoneNumber: string,
+  ) => {
+    try {
+      const { data } = await api.setupAdmin(
+        email,
+        password,
+        firstName,
+        lastName,
+        phoneNumber,
+      );
+
+      setUser(data.admin);
+      localStorage.setItem("auth_token", data.token);
+      return {};
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      console.error("Create initial admin error:", error);
+      return {
+        error: {
+          message:
+            error?.response?.data?.error ||
+            error?.message ||
+            "Failed to create initial admin",
+        },
+      };
+    }
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        session,
-        isAdmin,
         isLoading,
-        signUp,
         signIn,
+        signUp,
         signOut,
+        createInitialAdmin,
+        isAdmin: user?.role === "admin",
       }}
     >
       {children}
@@ -110,7 +160,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;

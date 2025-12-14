@@ -171,35 +171,103 @@ func parseMigrationFilename(filename string) (version int, name, direction, dbTy
 	return version, name, direction, dbType, nil
 }
 
-// Up runs all pending migrations
-func (m *Migrator) Up() error {
+// Up runs all pending migrations or a specific one
+func (m *Migrator) Up(target *int) error {
 	appliedVersions, err := m.getAppliedVersions()
 	if err != nil {
 		return fmt.Errorf("failed to get applied versions: %w", err)
 	}
 
-	count := 0
+	// --- Handle specific target reapplication if already applied ---
+	if target != nil {
+		var targetMigration *Migration
+		for i := range m.migrations {
+			if m.migrations[i].Version == *target {
+				targetMigration = &m.migrations[i]
+				break
+			}
+		}
+
+		if targetMigration == nil {
+			return fmt.Errorf("migration %d not found in available migrations", *target)
+		}
+
+		if _, isApplied := appliedVersions[*target]; isApplied {
+			// Target migration is already applied. Reapply it by rolling back and then applying again.
+			if targetMigration.DownSQL == "" {
+				return fmt.Errorf("no DOWN migration found for version %d, cannot reapply", *target)
+			}
+
+			log.Printf("Reapplying migration %03d: %s (rolling back first)", targetMigration.Version, targetMigration.Name)
+
+			// Perform rollback
+			if err := m.rollbackMigration(*targetMigration); err != nil {
+				return fmt.Errorf("failed to rollback migration %d for reapplication: %w", targetMigration.Version, err)
+			}
+
+			// Then apply
+			if err := m.applyMigration(*targetMigration); err != nil {
+				return fmt.Errorf("failed to apply migration %d after rollback: %w", targetMigration.Version, err)
+			}
+
+			log.Printf("Successfully reapplied migration %d", *target)
+			return nil // Reapplication complete for the specific target
+		}
+		// If target migration is not applied, it will be handled by the general apply logic below.
+	}
+	// --- End of target reapplication handling ---
+
+	var migrationsToApply []Migration
 	for _, migration := range m.migrations {
+		// If a target is specified, stop if we've passed it
+		if target != nil && migration.Version > *target {
+			break
+		}
+
+		// Skip if already applied. This correctly handles general application scenarios.
+		// The specific reapplication case for an *already applied* target is handled above and returns early.
 		if _, applied := appliedVersions[migration.Version]; applied {
 			continue
 		}
 
+		migrationsToApply = append(migrationsToApply, migration)
+	}
+
+	if len(migrationsToApply) == 0 {
+		if target != nil {
+			// This case is reached if the target was already applied and reapplication wasn't explicitly requested (or failed)
+			// or if no pending migrations exist before the target.
+			log.Printf("Migration %d was already applied, or no pending migrations before it.", *target)
+		} else {
+			log.Println("No pending migrations to apply")
+		}
+		return nil
+	}
+
+	count := 0
+	for _, migration := range migrationsToApply {
 		if migration.UpSQL == "" {
-			log.Printf("Warning: No UP migration found for version %d", migration.Version)
+			log.Printf("Warning: No UP migration found for version %d, skipping", migration.Version)
 			continue
 		}
 
-		log.Printf("Applying migration %d: %s", migration.Version, migration.Name)
+		log.Printf("Applying migration %03d: %s", migration.Version, migration.Name)
 
 		if err := m.applyMigration(migration); err != nil {
 			return fmt.Errorf("failed to apply migration %d: %w", migration.Version, err)
 		}
 
 		count++
+
+		// If a target is specified, and we just applied it, stop
+		if target != nil && migration.Version == *target {
+			break
+		}
 	}
 
 	if count == 0 {
-		log.Println("No pending migrations")
+		// This branch would be hit if migrationsToApply was not empty, but all had empty UpSQL
+		log.Println("No migrations with UP SQL found among pending ones.")
 	} else {
 		log.Printf("Successfully applied %d migration(s)", count)
 	}

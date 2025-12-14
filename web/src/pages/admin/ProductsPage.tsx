@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Pencil, Trash2, Search } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { formatPrice, Product, getCategories } from "@/lib/supabase";
+import { formatPrice } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +34,10 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import { useProducts } from "@/hooks/useProducts";
+import { api, Product } from "@/lib/api";
+import { useCategories } from "@/hooks/useCategories";
+import { ProductForm } from "@/components/ProductForm";
 
 export default function ProductsPage() {
   const queryClient = useQueryClient();
@@ -42,27 +45,22 @@ export default function ProductsPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const { data: products, isLoading } = useQuery({
-    queryKey: ["admin-products"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("products")
-        .select("*, category:categories(*)")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data as Product[];
+  const { data: products, isLoading } = useProducts(
+    {
+      search,
+      limit: 10,
+      offset: 0,
+      order: "created_at DESC",
     },
-  });
+    ["admin-products"],
+  );
 
-  const { data: categories } = useQuery({
-    queryKey: ["categories"],
-    queryFn: getCategories,
-  });
+  const { data: categories } = useCategories();
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("products").delete().eq("id", id);
-      if (error) throw error;
+      const { data: message } = await api.deleteProduct(id);
+      if (!message) throw new Error("Failed to delete product");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-products"] });
@@ -74,7 +72,7 @@ export default function ProductsPage() {
   });
 
   const filteredProducts = products?.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase())
+    p.name.toLowerCase().includes(search.toLowerCase()),
   );
 
   return (
@@ -154,13 +152,19 @@ export default function ProductsPage() {
             <tbody className="divide-y divide-border">
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
+                  <td
+                    colSpan={6}
+                    className="px-4 py-8 text-center text-muted-foreground"
+                  >
                     Loading...
                   </td>
                 </tr>
               ) : filteredProducts?.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
+                  <td
+                    colSpan={6}
+                    className="px-4 py-8 text-center text-muted-foreground"
+                  >
                     No products found
                   </td>
                 </tr>
@@ -182,7 +186,7 @@ export default function ProductsPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-sm text-muted-foreground">
-                      {product.category?.name || "—"}
+                      {product.category_name || "—"}
                     </td>
                     <td className="px-4 py-3 text-sm text-foreground">
                       {formatPrice(product.price)}
@@ -195,9 +199,7 @@ export default function ProductsPage() {
                         {product.featured && (
                           <Badge variant="secondary">Featured</Badge>
                         )}
-                        {product.is_new && (
-                          <Badge variant="outline">New</Badge>
-                        )}
+                        {product.is_new && <Badge variant="outline">New</Badge>}
                       </div>
                     </td>
                     <td className="px-4 py-3">
@@ -220,15 +222,20 @@ export default function ProductsPage() {
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Product</AlertDialogTitle>
+                              <AlertDialogTitle>
+                                Delete Product
+                              </AlertDialogTitle>
                               <AlertDialogDescription>
-                                Are you sure you want to delete "{product.name}"? This action cannot be undone.
+                                Are you sure you want to delete "{product.name}
+                                "? This action cannot be undone.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
                               <AlertDialogAction
-                                onClick={() => deleteMutation.mutate(product.id)}
+                                onClick={() =>
+                                  deleteMutation.mutate(product.id)
+                                }
                                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                               >
                                 Delete
@@ -246,216 +253,5 @@ export default function ProductsPage() {
         </div>
       </div>
     </div>
-  );
-}
-
-// Product Form Component
-function ProductForm({
-  product,
-  categories,
-  onSuccess,
-}: {
-  product: Product | null;
-  categories: { id: string; name: string; slug: string }[];
-  onSuccess: () => void;
-}) {
-  const [formData, setFormData] = useState({
-    name: product?.name || "",
-    slug: product?.slug || "",
-    description: product?.description || "",
-    price: product?.price || 0,
-    original_price: product?.original_price || 0,
-    category_id: product?.category_id || "",
-    images: product?.images?.join("\n") || "",
-    sizes: product?.sizes?.join(", ") || "",
-    colors: product?.colors?.join(", ") || "",
-    stock: product?.stock || 0,
-    featured: product?.featured || false,
-    is_new: product?.is_new || false,
-  });
-
-  const mutation = useMutation({
-    mutationFn: async () => {
-      const data = {
-        name: formData.name,
-        slug: formData.slug || formData.name.toLowerCase().replace(/\s+/g, "-"),
-        description: formData.description || null,
-        price: formData.price,
-        original_price: formData.original_price || null,
-        category_id: formData.category_id || null,
-        images: formData.images.split("\n").filter(Boolean),
-        sizes: formData.sizes.split(",").map((s) => s.trim()).filter(Boolean),
-        colors: formData.colors.split(",").map((s) => s.trim()).filter(Boolean),
-        stock: formData.stock,
-        featured: formData.featured,
-        is_new: formData.is_new,
-      };
-
-      if (product) {
-        const { error } = await supabase
-          .from("products")
-          .update(data)
-          .eq("id", product.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from("products").insert(data);
-        if (error) throw error;
-      }
-    },
-    onSuccess: () => {
-      toast.success(product ? "Product updated" : "Product created");
-      onSuccess();
-    },
-    onError: (error: Error) => {
-      toast.error(error.message);
-    },
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    mutation.mutate();
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="name">Product Name *</Label>
-          <Input
-            id="name"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="slug">Slug</Label>
-          <Input
-            id="slug"
-            value={formData.slug}
-            onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-            placeholder="auto-generated-from-name"
-          />
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
-        <Textarea
-          id="description"
-          value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          rows={3}
-        />
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="space-y-2">
-          <Label htmlFor="price">Price (KES) *</Label>
-          <Input
-            id="price"
-            type="number"
-            value={formData.price}
-            onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="original_price">Original Price (KES)</Label>
-          <Input
-            id="original_price"
-            type="number"
-            value={formData.original_price}
-            onChange={(e) => setFormData({ ...formData, original_price: Number(e.target.value) })}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="stock">Stock *</Label>
-          <Input
-            id="stock"
-            type="number"
-            value={formData.stock}
-            onChange={(e) => setFormData({ ...formData, stock: Number(e.target.value) })}
-            required
-          />
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="category">Category</Label>
-        <Select
-          value={formData.category_id}
-          onValueChange={(value) => setFormData({ ...formData, category_id: value })}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select category" />
-          </SelectTrigger>
-          <SelectContent>
-            {categories.map((cat) => (
-              <SelectItem key={cat.id} value={cat.id}>
-                {cat.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="images">Image URLs (one per line)</Label>
-        <Textarea
-          id="images"
-          value={formData.images}
-          onChange={(e) => setFormData({ ...formData, images: e.target.value })}
-          rows={3}
-          placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg"
-        />
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="sizes">Sizes (comma separated)</Label>
-          <Input
-            id="sizes"
-            value={formData.sizes}
-            onChange={(e) => setFormData({ ...formData, sizes: e.target.value })}
-            placeholder="S, M, L, XL"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="colors">Colors (comma separated)</Label>
-          <Input
-            id="colors"
-            value={formData.colors}
-            onChange={(e) => setFormData({ ...formData, colors: e.target.value })}
-            placeholder="Black, White, Navy"
-          />
-        </div>
-      </div>
-
-      <div className="flex gap-6">
-        <div className="flex items-center gap-2">
-          <Switch
-            id="featured"
-            checked={formData.featured}
-            onCheckedChange={(checked) => setFormData({ ...formData, featured: checked })}
-          />
-          <Label htmlFor="featured">Featured</Label>
-        </div>
-        <div className="flex items-center gap-2">
-          <Switch
-            id="is_new"
-            checked={formData.is_new}
-            onCheckedChange={(checked) => setFormData({ ...formData, is_new: checked })}
-          />
-          <Label htmlFor="is_new">New Arrival</Label>
-        </div>
-      </div>
-
-      <div className="flex justify-end gap-2">
-        <Button type="submit" disabled={mutation.isPending}>
-          {mutation.isPending ? "Saving..." : product ? "Update Product" : "Create Product"}
-        </Button>
-      </div>
-    </form>
   );
 }

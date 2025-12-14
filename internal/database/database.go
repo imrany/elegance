@@ -32,7 +32,23 @@ type DB interface {
 
 	// Settings operations
 	GetSiteSetting(key string) (*models.SiteSetting, error)
-	UpdateSiteSetting(key string, value []byte) error
+	UpdateSiteSetting(key string, value string) error
+
+	// Admin operations
+	GetAllOrders() ([]models.Order, error)
+	UpdateOrderStatus(id, status, paymentStatus string) error
+	CreateProduct(product *models.Product) error
+	UpdateProduct(product *models.Product) error
+	DeleteProduct(id string) error
+
+	// User management (admin)
+	GetAllUsers() ([]models.User, error)
+	UpdateUserRole(id, role string) error
+	DeleteUser(id string) error
+
+	// setup  (initial)
+	GetSetupStatus() (*models.SetupStatus, error)
+	SetupAdmin(user *models.User) (*models.User, error)
 
 	// Lifecycle
 	Close() error

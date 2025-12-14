@@ -20,7 +20,7 @@ func (pg *PostgresDB) GetSiteSetting(key string) (*models.SiteSetting, error) {
 	return &s, nil
 }
 
-func (pg *PostgresDB) UpdateSiteSetting(key string, value []byte) error {
+func (pg *PostgresDB) UpdateSiteSetting(key string, value string) error {
 	query := `
 		UPDATE site_settings
 		SET value = $1, updated_at = $2

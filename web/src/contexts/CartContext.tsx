@@ -1,5 +1,11 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { Product } from "@/lib/supabase";
+import { Product } from "@/lib/api";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
 
 export interface CartItem {
   product: Product;
@@ -10,9 +16,19 @@ export interface CartItem {
 
 interface CartContextType {
   items: CartItem[];
-  addItem: (product: Product, quantity?: number, size?: string, color?: string) => void;
+  addItem: (
+    product: Product,
+    quantity?: number,
+    size?: string,
+    color?: string,
+  ) => void;
   removeItem: (productId: string, size?: string, color?: string) => void;
-  updateQuantity: (productId: string, quantity: number, size?: string, color?: string) => void;
+  updateQuantity: (
+    productId: string,
+    quantity: number,
+    size?: string,
+    color?: string,
+  ) => void;
   clearCart: () => void;
   itemCount: number;
   subtotal: number;
@@ -36,13 +52,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return `${productId}-${size || "default"}-${color || "default"}`;
   };
 
-  const addItem = (product: Product, quantity = 1, size?: string, color?: string) => {
+  const addItem = (
+    product: Product,
+    quantity = 1,
+    size?: string,
+    color?: string,
+  ) => {
     setItems((prev) => {
       const existingIndex = prev.findIndex(
         (item) =>
           item.product.id === product.id &&
           item.size === size &&
-          item.color === color
+          item.color === color,
       );
 
       if (existingIndex > -1) {
@@ -63,12 +84,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
             item.product.id === productId &&
             item.size === size &&
             item.color === color
-          )
-      )
+          ),
+      ),
     );
   };
 
-  const updateQuantity = (productId: string, quantity: number, size?: string, color?: string) => {
+  const updateQuantity = (
+    productId: string,
+    quantity: number,
+    size?: string,
+    color?: string,
+  ) => {
     if (quantity <= 0) {
       removeItem(productId, size, color);
       return;
@@ -80,8 +106,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
         item.size === size &&
         item.color === color
           ? { ...item, quantity }
-          : item
-      )
+          : item,
+      ),
     );
   };
 
@@ -90,7 +116,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = items.reduce(
     (sum, item) => sum + item.product.price * item.quantity,
-    0
+    0,
   );
 
   return (

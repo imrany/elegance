@@ -1,17 +1,18 @@
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { 
-  LayoutDashboard, 
-  Package, 
-  ShoppingCart, 
-  Settings, 
+import {
+  LayoutDashboard,
+  Package,
+  ShoppingCart,
+  Settings,
   LogOut,
   Menu,
-  X
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useSiteSetting } from "@/hooks/useSiteSetting";
 
 const navItems = [
   { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
@@ -25,6 +26,20 @@ export default function AdminLayout() {
   const navigate = useNavigate();
   const { user, isAdmin, isLoading, signOut } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { data: setting, isLoading: settingIsLoading } =
+    useSiteSetting("store");
+  const value = (() => {
+    if (typeof setting?.value === "string" && setting) {
+      try {
+        return JSON.parse(setting?.value);
+      } catch (e) {
+        console.error("Error parsing store settings value:", e);
+        return null;
+      }
+    }
+    return null;
+  })();
+  const siteName = value?.["name"] || "[Your Store Name]";
 
   useEffect(() => {
     if (!isLoading) {
@@ -37,14 +52,14 @@ export default function AdminLayout() {
     }
   }, [user, isAdmin, isLoading, navigate]);
 
-  const handleSignOut = async () => {
-    await signOut();
+  const handleSignOut = () => {
+    signOut();
     navigate("/");
   };
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-accent-50 to-accent-100">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
       </div>
     );
@@ -73,12 +88,19 @@ export default function AdminLayout() {
         <div className="flex h-full flex-col">
           {/* Logo */}
           <div className="flex h-16 items-center border-b border-border px-6">
-            <Link to="/" className="font-serif text-xl font-semibold tracking-elegant text-foreground">
-              ÉLÉGANCE
-            </Link>
-            <span className="ml-2 rounded bg-accent px-2 py-0.5 text-xs font-medium text-accent-foreground">
-              Admin
-            </span>
+            {!settingIsLoading && (
+              <>
+                <Link
+                  to="/"
+                  className="font-serif text-xl font-semibold tracking-elegant text-foreground"
+                >
+                  {siteName}
+                </Link>
+                <span className="ml-2 rounded bg-accent px-2 py-0.5 text-xs font-medium text-accent-foreground">
+                  Admin
+                </span>
+              </>
+            )}
           </div>
 
           {/* Navigation */}
@@ -106,7 +128,8 @@ export default function AdminLayout() {
           {/* Footer */}
           <div className="border-t border-border p-4">
             <div className="mb-4 text-sm text-muted-foreground">
-              Signed in as<br />
+              Signed in as
+              <br />
               <span className="font-medium text-foreground">{user.email}</span>
             </div>
             <Button

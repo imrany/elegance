@@ -92,3 +92,79 @@ func (pg *PostgresDB) UpdateUser(user *models.User) error {
 
 	return nil
 }
+
+// GetAllUsers retrieves all users (admin)
+func (pg *PostgresDB) GetAllUsers() ([]models.User, error) {
+	query := `
+		SELECT id, email, role, created_at, updated_at
+		FROM users
+		ORDER BY created_at DESC
+	`
+
+	rows, err := pg.db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query users: %w", err)
+	}
+	defer rows.Close()
+
+	var users []models.User
+	for rows.Next() {
+		var u models.User
+		if err := rows.Scan(&u.ID, &u.Email, &u.Role, &u.CreatedAt, &u.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("failed to scan user: %w", err)
+		}
+		users = append(users, u)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating users: %w", err)
+	}
+
+	return users, nil
+}
+
+// UpdateUserRole updates a user's role
+func (pg *PostgresDB) UpdateUserRole(id, role string) error {
+	query := `
+		UPDATE users
+		SET role = $1, updated_at = NOW()
+		WHERE id = $2
+	`
+
+	result, err := pg.db.Exec(query, role, id)
+	if err != nil {
+		return fmt.Errorf("failed to update user role: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get affected rows: %w", err)
+	}
+
+	if rows == 0 {
+		return fmt.Errorf("user not found")
+	}
+
+	return nil
+}
+
+// DeleteUser deletes a user account
+func (pg *PostgresDB) DeleteUser(id string) error {
+	query := `DELETE FROM users WHERE id = $1`
+
+	result, err := pg.db.Exec(query, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete user: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get affected rows: %w", err)
+	}
+
+	if rows == 0 {
+		return fmt.Errorf("user not found")
+	}
+
+	return nil
+}

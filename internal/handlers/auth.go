@@ -88,11 +88,7 @@ func (h *AuthHandler) SignUp(c *gin.Context) {
 	}
 
 	utils.SuccessResponse(c, http.StatusCreated, gin.H{
-		"user": gin.H{
-			"id":    user.ID,
-			"email": user.Email,
-			"role":  user.Role,
-		},
+		"user": user,
 	})
 }
 
@@ -134,11 +130,7 @@ func (h *AuthHandler) SignIn(c *gin.Context) {
 
 	utils.SuccessResponse(c, http.StatusOK, gin.H{
 		"token": tokenString,
-		"user": gin.H{
-			"id":    user.ID,
-			"email": user.Email,
-			"role":  user.Role,
-		},
+		"user":  user,
 	})
 }
 
@@ -153,8 +145,6 @@ func (h *AuthHandler) GetMe(c *gin.Context) {
 	}
 
 	utils.SuccessResponse(c, http.StatusOK, gin.H{
-		"id":    user.ID,
-		"email": user.Email,
-		"role":  user.Role,
+		"user": user,
 	})
 }

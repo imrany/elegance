@@ -97,3 +97,75 @@ func (sq *SQLiteDB) UpdateUser(user *models.User) error {
 
 	return nil
 }
+
+// GetAllUsers retrieves all users (admin)
+func (sq *SQLiteDB) GetAllUsers() ([]models.User, error) {
+	query := `
+		SELECT id, email, role, created_at, updated_at
+		FROM users
+		ORDER BY created_at DESC
+	`
+
+	rows, err := sq.db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query users: %w", err)
+	}
+	defer rows.Close()
+
+	var users []models.User
+	for rows.Next() {
+		var u models.User
+		if err := rows.Scan(&u.ID, &u.Email, &u.Role, &u.CreatedAt, &u.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("failed to scan user: %w", err)
+		}
+		users = append(users, u)
+	}
+
+	return users, nil
+}
+
+// UpdateUserRole updates a user's role
+func (sq *SQLiteDB) UpdateUserRole(id, role string) error {
+	query := `
+		UPDATE users
+		SET role = ?, updated_at = datetime('now')
+		WHERE id = ?
+	`
+
+	result, err := sq.db.Exec(query, role, id)
+	if err != nil {
+		return fmt.Errorf("failed to update user role: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get affected rows: %w", err)
+	}
+
+	if rows == 0 {
+		return fmt.Errorf("user not found")
+	}
+
+	return nil
+}
+
+// DeleteUser deletes a user account
+func (sq *SQLiteDB) DeleteUser(id string) error {
+	query := `DELETE FROM users WHERE id = ?`
+
+	result, err := sq.db.Exec(query, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete user: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get affected rows: %w", err)
+	}
+
+	if rows == 0 {
+		return fmt.Errorf("user not found")
+	}
+
+	return nil
+}

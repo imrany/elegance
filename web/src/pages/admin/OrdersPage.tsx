@@ -2,8 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Search, Eye, ChevronDown } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { formatPrice } from "@/lib/supabase";
+import { formatPrice } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -27,23 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-
-interface Order {
-  id: string;
-  customer_name: string;
-  customer_email: string;
-  customer_phone: string;
-  delivery_address: string;
-  items: any[];
-  subtotal: number;
-  delivery_fee: number;
-  total: number;
-  status: string;
-  payment_method: string | null;
-  payment_status: string | null;
-  notes: string | null;
-  created_at: string;
-}
+import { api, Order } from "@/lib/api";
 
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-500/10 text-yellow-600",
@@ -62,22 +45,19 @@ export default function OrdersPage() {
   const { data: orders, isLoading } = useQuery({
     queryKey: ["admin-orders"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("orders")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data as Order[];
+      const { data } = await api.getAllOrders();
+      if (!data) throw new Error("Failed to fetch orders");
+      return data;
     },
   });
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { error } = await supabase
-        .from("orders")
-        .update({ status })
-        .eq("id", id);
-      if (error) throw error;
+      const { data } = await api.updateOrderStatus(id, {
+        status,
+        payment_status: status === "cancelled" ? "cancelled" : "paid",
+      });
+      if (!data) throw new Error("Failed to update order status");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
@@ -93,7 +73,8 @@ export default function OrdersPage() {
       order.customer_name.toLowerCase().includes(search.toLowerCase()) ||
       order.customer_email.toLowerCase().includes(search.toLowerCase()) ||
       order.id.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = statusFilter === "all" || order.status === statusFilter;
+    const matchesStatus =
+      statusFilter === "all" || order.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -103,9 +84,7 @@ export default function OrdersPage() {
         <h1 className="font-serif text-2xl font-light text-foreground md:text-3xl">
           Orders
         </h1>
-        <p className="mt-1 text-muted-foreground">
-          Manage customer orders
-        </p>
+        <p className="mt-1 text-muted-foreground">Manage customer orders</p>
       </div>
 
       {/* Filters */}
@@ -163,13 +142,19 @@ export default function OrdersPage() {
             <tbody className="divide-y divide-border">
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
+                  <td
+                    colSpan={6}
+                    className="px-4 py-8 text-center text-muted-foreground"
+                  >
                     Loading...
                   </td>
                 </tr>
               ) : filteredOrders?.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
+                  <td
+                    colSpan={6}
+                    className="px-4 py-8 text-center text-muted-foreground"
+                  >
                     No orders found
                   </td>
                 </tr>
@@ -211,22 +196,26 @@ export default function OrdersPage() {
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent>
-                          {["pending", "processing", "shipped", "delivered", "cancelled"].map(
-                            (status) => (
-                              <DropdownMenuItem
-                                key={status}
-                                onClick={() =>
-                                  updateStatusMutation.mutate({
-                                    id: order.id,
-                                    status,
-                                  })
-                                }
-                                className="capitalize"
-                              >
-                                {status}
-                              </DropdownMenuItem>
-                            )
-                          )}
+                          {[
+                            "pending",
+                            "processing",
+                            "shipped",
+                            "delivered",
+                            "cancelled",
+                          ].map((status) => (
+                            <DropdownMenuItem
+                              key={status}
+                              onClick={() =>
+                                updateStatusMutation.mutate({
+                                  id: order.id,
+                                  status,
+                                })
+                              }
+                              className="capitalize"
+                            >
+                              {status}
+                            </DropdownMenuItem>
+                          ))}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </td>
@@ -250,23 +239,38 @@ export default function OrdersPage() {
       </div>
 
       {/* Order Details Dialog */}
-      <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
+      <Dialog
+        open={!!selectedOrder}
+        onOpenChange={() => setSelectedOrder(null)}
+      >
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>
-              Order #{selectedOrder?.id.slice(0, 8)}
-            </DialogTitle>
+            <DialogTitle>Order #{selectedOrder?.id.slice(0, 8)}</DialogTitle>
           </DialogHeader>
           {selectedOrder && (
             <div className="space-y-6">
               {/* Customer Info */}
               <div className="rounded-lg border border-border p-4">
-                <h3 className="font-medium text-foreground">Customer Details</h3>
+                <h3 className="font-medium text-foreground">
+                  Customer Details
+                </h3>
                 <div className="mt-2 space-y-1 text-sm">
-                  <p><span className="text-muted-foreground">Name:</span> {selectedOrder.customer_name}</p>
-                  <p><span className="text-muted-foreground">Email:</span> {selectedOrder.customer_email}</p>
-                  <p><span className="text-muted-foreground">Phone:</span> {selectedOrder.customer_phone}</p>
-                  <p><span className="text-muted-foreground">Address:</span> {selectedOrder.delivery_address}</p>
+                  <p>
+                    <span className="text-muted-foreground">Name:</span>{" "}
+                    {selectedOrder.customer_name}
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">Email:</span>{" "}
+                    {selectedOrder.customer_email}
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">Phone:</span>{" "}
+                    {selectedOrder.customer_phone}
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">Address:</span>{" "}
+                    {selectedOrder.delivery_address}
+                  </p>
                 </div>
               </div>
 
@@ -274,8 +278,12 @@ export default function OrdersPage() {
               <div className="rounded-lg border border-border p-4">
                 <h3 className="font-medium text-foreground">Order Items</h3>
                 <div className="mt-2 divide-y divide-border">
+                  {/*eslint-disable-next-line @typescript-eslint/no-explicit-any*/}
                   {selectedOrder.items.map((item: any, idx: number) => (
-                    <div key={idx} className="flex justify-between py-2 text-sm">
+                    <div
+                      key={idx}
+                      className="flex justify-between py-2 text-sm"
+                    >
                       <span>
                         {item.name} × {item.quantity}
                         {item.size && ` (${item.size})`}

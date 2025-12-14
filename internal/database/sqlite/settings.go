@@ -20,7 +20,7 @@ func (sq *SQLiteDB) GetSiteSetting(key string) (*models.SiteSetting, error) {
 	return &s, nil
 }
 
-func (sq *SQLiteDB) UpdateSiteSetting(key string, value []byte) error {
+func (sq *SQLiteDB) UpdateSiteSetting(key string, value string) error {
 	query := `
 		UPDATE site_settings
 		SET value = ?, updated_at = ?

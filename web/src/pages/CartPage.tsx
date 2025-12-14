@@ -3,7 +3,8 @@ import { Trash2, Plus, Minus, ShoppingBag } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
-import { formatPrice } from "@/lib/supabase";
+import { formatPrice } from "@/lib/utils";
+import { useEffect } from "react";
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity, subtotal, clearCart } = useCart();
@@ -11,6 +12,13 @@ export default function CartPage() {
   const deliveryFee = subtotal >= 10000 ? 0 : 500;
   const total = subtotal + deliveryFee;
 
+  useEffect(() => {
+    scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "smooth",
+    });
+  }, []);
   if (items.length === 0) {
     return (
       <Layout>
@@ -91,7 +99,7 @@ export default function CartPage() {
                               item.product.id,
                               item.quantity - 1,
                               item.size,
-                              item.color
+                              item.color,
                             )
                           }
                         >
@@ -109,7 +117,7 @@ export default function CartPage() {
                               item.product.id,
                               item.quantity + 1,
                               item.size,
-                              item.color
+                              item.color,
                             )
                           }
                         >
@@ -133,11 +141,7 @@ export default function CartPage() {
               ))}
             </div>
 
-            <Button
-              variant="outline"
-              className="mt-4"
-              onClick={clearCart}
-            >
+            <Button variant="outline" className="mt-4" onClick={clearCart}>
               Clear Cart
             </Button>
           </div>
@@ -152,7 +156,9 @@ export default function CartPage() {
               <div className="mt-6 space-y-4">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Subtotal</span>
-                  <span className="text-foreground">{formatPrice(subtotal)}</span>
+                  <span className="text-foreground">
+                    {formatPrice(subtotal)}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Delivery</span>
@@ -168,7 +174,9 @@ export default function CartPage() {
                 <div className="border-t border-border pt-4">
                   <div className="flex justify-between font-medium">
                     <span className="text-foreground">Total</span>
-                    <span className="text-foreground">{formatPrice(total)}</span>
+                    <span className="text-foreground">
+                      {formatPrice(total)}
+                    </span>
                   </div>
                 </div>
               </div>
