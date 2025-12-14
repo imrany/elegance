@@ -1,4 +1,4 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { formatPrice } from "@/lib/utils";
@@ -9,16 +9,16 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/contexts/CartContext";
 import { useProduct } from "@/hooks/useProducts";
+import { toast } from "sonner";
 
 export default function ProductPage() {
   const { slug } = useParams<{ slug: string }>();
-  const { toast } = useToast();
   const { addItem } = useCart();
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
-
+  const navigate = useNavigate();
   const { data: product, isLoading } = useProduct(slug);
 
   if (isLoading) {
@@ -61,17 +61,11 @@ export default function ProductPage() {
 
   const handleAddToCart = () => {
     if (!selectedSize && product.sizes && product.sizes.length > 0) {
-      toast({
-        title: "Please select a size",
-        variant: "destructive",
-      });
+      toast.error("Please select a size");
       return;
     }
     if (!selectedColor && product.colors && product.colors.length > 0) {
-      toast({
-        title: "Please select a color",
-        variant: "destructive",
-      });
+      toast.error("Please select a color");
       return;
     }
     addItem(
@@ -80,9 +74,13 @@ export default function ProductPage() {
       selectedSize || undefined,
       selectedColor || undefined,
     );
-    toast({
-      title: "Added to bag",
-      description: `${product.name} has been added to your shopping bag.`,
+    toast.success("Added to cart", {
+      duration: 3000,
+      description: `${product.name} has been added to your shopping cart.`,
+      action: {
+        label: "View Cart",
+        onClick: () => navigate("/cart"),
+      },
     });
   };
 
@@ -274,7 +272,7 @@ export default function ProductPage() {
                   onClick={handleAddToCart}
                   disabled={product.stock === 0}
                 >
-                  {product.stock === 0 ? "Out of Stock" : "Add to Bag"}
+                  {product.stock === 0 ? "Out of Stock" : "Add to Cart"}
                 </Button>
                 <Button
                   size="lg"
