@@ -21,6 +21,8 @@ import { useEffect, useState } from "react";
 import { api } from "./lib/api";
 import CheckoutPage from "./pages/CheckoutPage";
 import OrderConfirmationPage from "./pages/OrderConfirmationPage";
+import UsersManagement from "./pages/admin/UsersManagement";
+import AccountSettings from "./pages/admin/AccountSettings";
 
 const queryClient = new QueryClient();
 
@@ -97,6 +99,8 @@ const App = () => {
                       <Route index element={<DashboardPage />} />
                       <Route path="products" element={<ProductsPage />} />
                       <Route path="orders" element={<OrdersPage />} />
+                      <Route path="users" element={<UsersManagement />} />
+                      <Route path="account" element={<AccountSettings />} />
                       <Route path="settings" element={<SettingsPage />} />
                     </Route>
 

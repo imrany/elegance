@@ -35,7 +35,7 @@ func (sq *SQLiteDB) CreateUser(user *models.User) (*models.User, error) {
 // GetUserByEmail retrieves a user by email
 func (sq *SQLiteDB) GetUserByEmail(email string) (*models.User, error) {
 	query := `
-		SELECT id, email, role, created_at, updated_at, first_name, last_name, phone_number
+		SELECT id, email, role, created_at, updated_at, first_name, last_name, phone_number, password
 		FROM users
 		WHERE email = ?
 	`
@@ -43,7 +43,7 @@ func (sq *SQLiteDB) GetUserByEmail(email string) (*models.User, error) {
 	var user models.User
 	err := sq.db.QueryRow(query, email).Scan(
 		&user.ID, &user.Email, &user.Role, &user.CreatedAt, &user.UpdatedAt,
-		&user.FirstName, &user.LastName, &user.PhoneNumber,
+		&user.FirstName, &user.LastName, &user.PhoneNumber, &user.Password,
 	)
 
 	if err != nil {
@@ -59,7 +59,7 @@ func (sq *SQLiteDB) GetUserByEmail(email string) (*models.User, error) {
 // GetUserByID retrieves a user by ID
 func (sq *SQLiteDB) GetUserByID(id string) (*models.User, error) {
 	query := `
-		SELECT id, email, role, created_at, updated_at, first_name, last_name, phone_number
+		SELECT id, email, role, created_at, updated_at, first_name, last_name, phone_number, password
 		FROM users
 		WHERE id = ?
 	`
@@ -67,7 +67,7 @@ func (sq *SQLiteDB) GetUserByID(id string) (*models.User, error) {
 	var user models.User
 	err := sq.db.QueryRow(query, id).Scan(
 		&user.ID, &user.Email, &user.Role, &user.CreatedAt, &user.UpdatedAt,
-		&user.FirstName, &user.LastName, &user.PhoneNumber,
+		&user.FirstName, &user.LastName, &user.PhoneNumber, &user.Password,
 	)
 
 	if err != nil {
@@ -101,7 +101,7 @@ func (sq *SQLiteDB) UpdateUser(user *models.User) error {
 // GetAllUsers retrieves all users (admin)
 func (sq *SQLiteDB) GetAllUsers() ([]models.User, error) {
 	query := `
-		SELECT id, email, role, created_at, updated_at
+		SELECT id, email, role, created_at, updated_at, first_name, last_name, phone_number
 		FROM users
 		ORDER BY created_at DESC
 	`
@@ -115,7 +115,7 @@ func (sq *SQLiteDB) GetAllUsers() ([]models.User, error) {
 	var users []models.User
 	for rows.Next() {
 		var u models.User
-		if err := rows.Scan(&u.ID, &u.Email, &u.Role, &u.CreatedAt, &u.UpdatedAt); err != nil {
+		if err := rows.Scan(&u.ID, &u.Email, &u.Role, &u.CreatedAt, &u.UpdatedAt, &u.FirstName, &u.LastName, &u.PhoneNumber); err != nil {
 			return nil, fmt.Errorf("failed to scan user: %w", err)
 		}
 		users = append(users, u)

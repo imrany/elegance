@@ -45,6 +45,7 @@ type DB interface {
 	GetAllUsers() ([]models.User, error)
 	UpdateUserRole(id, role string) error
 	DeleteUser(id string) error
+	GetUserOrders(userId string) ([]models.Order, error)
 
 	// setup  (initial)
 	GetSetupStatus() (*models.SetupStatus, error)

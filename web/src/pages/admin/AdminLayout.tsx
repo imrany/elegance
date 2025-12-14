@@ -7,6 +7,8 @@ import {
   LogOut,
   Menu,
   X,
+  User,
+  UsersRound,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,8 +18,10 @@ import { useSiteSetting } from "@/hooks/useSiteSetting";
 
 const navItems = [
   { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
+  { name: "Account", href: "/admin/account", icon: User },
   { name: "Products", href: "/admin/products", icon: Package },
   { name: "Orders", href: "/admin/orders", icon: ShoppingCart },
+  { name: "Users", href: "/admin/users", icon: UsersRound },
   { name: "Settings", href: "/admin/settings", icon: Settings },
 ];
 

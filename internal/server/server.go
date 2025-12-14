@@ -148,6 +148,9 @@ func (s *Server) setupRoutes() {
 			admin.POST("/products", adminHandler.CreateProduct)
 			admin.PUT("/products/:id", adminHandler.UpdateProduct)
 			admin.DELETE("/products/:id", adminHandler.DeleteProduct)
+			admin.GET("/users/:userId/orders", adminHandler.GetUserOrders)
+			admin.PUT("/users/password", adminHandler.UpdateUserPassword)
+			admin.PUT("/users", adminHandler.UpdateUser)
 
 			// Images management
 			admin.POST("/upload/image", adminHandler.UploadImage)

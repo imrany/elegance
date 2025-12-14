@@ -430,3 +430,36 @@ func (sq *SQLiteDB) DeleteProduct(id string) error {
 
 	return nil
 }
+
+// GetUserOrders retrieves orders for a specific user
+func (sq *SQLiteDB) GetUserOrders(userId string) ([]models.Order, error) {
+	query := `
+		SELECT id, user_id, status, total_price, created_at, updated_at
+		FROM orders
+		WHERE user_id = ?
+	`
+
+	rows, err := sq.db.Query(query, userId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user orders: %w", err)
+	}
+	defer rows.Close()
+
+	var orders []models.Order
+	for rows.Next() {
+		var order models.Order
+		if err := rows.Scan(
+			&order.ID, &order.Customer.UserID, &order.Status, &order.Total,
+			&order.CreatedAt, &order.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan order: %w", err)
+		}
+		orders = append(orders, order)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to iterate over rows: %w", err)
+	}
+
+	return orders, nil
+}

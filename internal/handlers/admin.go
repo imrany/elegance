@@ -69,30 +69,40 @@ func (h *AdminHandler) UpdateSetting(c *gin.Context) {
 
 	// delete previous logo if key is "store" and logo is not empty
 	if key == "store" && req.Value != "" {
-		// Retrieve the CURRENT setting from the database BEFORE updating it
+		// 1. Get the CURRENT setting from the database BEFORE updating it
 		setting, err := h.db.GetSiteSetting(key)
 		if err != nil {
 			// Log the error but continue; the setting might not exist yet, which is fine.
 			log.Printf("Failed to get existing site setting (key: %s): %v", key, err)
 		} else if setting != nil && setting.Value != "" {
-			// CRITICAL FIX: Only attempt to trim and unmarshal if 'setting' is not nil
 			currentValue := strings.TrimSpace(setting.Value)
 
-			// construct filename from setting.Value string which has logo {"logo":"/uploads/logo.png"}
 			var storeSetting struct {
 				Logo string `json:"logo"`
 			}
 
-			// We use currentValue (the old DB value) to find the old logo name
+			// 2. Unmarshal the OLD value from the DB
 			if err := json.Unmarshal([]byte(currentValue), &storeSetting); err != nil {
-				log.Printf("Failed to unmarshal store setting JSON (key: %s): %v", key, err)
-			} else if storeSetting.Logo != "" {
-				// Extract just the filename (e.g., "logo.png" from "/uploads/logo.png")
-				parsedLogoFilename := filepath.Base(storeSetting.Logo)
+				log.Printf("Failed to unmarshal existing store setting JSON (key: %s): %v", key, err)
+			} else {
+				// 3. Unmarshal the NEW incoming value once
+				var reqSetting struct {
+					Logo string `json:"logo"`
+				}
+				if err := json.Unmarshal([]byte(strings.TrimSpace(req.Value)), &reqSetting); err != nil {
+					log.Printf("Failed to unmarshal new store setting JSON (key: %s): %v", key, err)
+				}
 
-				// Use the correctly parsed filename for deletion
-				if err := DeleteFile(userIDStr, parsedLogoFilename); err != nil {
-					log.Println("Failed to delete logo:", err)
+				// 4. Compare old logo path with new logo path
+				if storeSetting.Logo != "" && storeSetting.Logo != reqSetting.Logo {
+					// Extract just the filename (e.g., "logo.png" from "/uploads/logo.png")
+					parsedLogoFilename := filepath.Base(storeSetting.Logo)
+
+					// Use the correctly parsed filename for deletion
+					if err := DeleteFile(userIDStr, parsedLogoFilename); err != nil {
+						// Log the error but deletion failure shouldn't stop the setting update
+						log.Println("Failed to delete logo file:", err)
+					}
 				}
 			}
 		}
@@ -299,11 +309,11 @@ func (h *AdminHandler) CreateInitialAdmin(c *gin.Context) {
 	}
 
 	var req struct {
-		Email       string `json:"email" binding:"required,email"`
-		Password    string `json:"password" binding:"required,min=6"`
-		FirstName   string `json:"first_name" binding:"required"`
-		LastName    string `json:"last_name" binding:"required"`
-		PhoneNumber string `json:"phone_number" binding:"required"`
+		Email       string `json:"email" db:"email"`
+		FirstName   string `json:"first_name" db:"first_name"`
+		LastName    string `json:"last_name" db:"last_name"`
+		PhoneNumber string `json:"phone_number" db:"phone_number"`
+		Password    string `json:"password" db:"password"`
 	}
 
 	if err := json.NewDecoder(c.Request.Body).Decode(&req); err != nil {
@@ -482,5 +492,97 @@ func (h *AdminHandler) DeleteImage(c *gin.Context) {
 
 	utils.SuccessResponse(c, http.StatusOK, gin.H{
 		"message": "Image deleted successfully",
+	})
+}
+
+func (h *AdminHandler) GetUserOrders(c *gin.Context) {
+	userID := c.Param("userId")
+	// Convert user_id to string
+	userIDStr := fmt.Sprintf("%v", userID)
+
+	if orders, err := h.db.GetUserOrders(userIDStr); err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to get user orders", err)
+		return
+	} else {
+		utils.SuccessResponse(c, http.StatusOK, gin.H{
+			"data": orders,
+		})
+	}
+}
+
+func (h *AdminHandler) UpdateUserPassword(c *gin.Context) {
+	userID := c.Param("userId")
+	// Convert user_id to string
+	userIDStr := fmt.Sprintf("%v", userID)
+	var req struct {
+		CurrentPassword string `json:"current_password"`
+		NewPassword     string `json:"new_password"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	user, err := h.db.GetUserByID(userIDStr)
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to get user", err)
+		return
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.CurrentPassword)); err != nil {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "Invalid current password", err)
+		return
+	}
+
+	newPasswordHash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to hash new password", err)
+		return
+	}
+	newUser := user
+	newUser.Password = string(newPasswordHash)
+	err = h.db.UpdateUser(newUser)
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to update user", err)
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, gin.H{
+		"message": "User password updated successfully",
+	})
+}
+
+func (h *AdminHandler) UpdateUser(c *gin.Context) {
+	var req struct {
+		Id        string `json:"id"`
+		FirstName string `json:"first_name"`
+		LastName  string `json:"last_name"`
+		Email     string `json:"email"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	user, err := h.db.GetUserByID(req.Id)
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to get user", err)
+		return
+	}
+
+	newUser := user
+	newUser.FirstName = req.FirstName
+	newUser.LastName = req.LastName
+	newUser.Email = req.Email
+	err = h.db.UpdateUser(newUser)
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to update user", err)
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, gin.H{
+		"message": "User updated successfully",
 	})
 }

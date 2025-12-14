@@ -314,6 +314,33 @@ class ApiClient {
     });
   }
 
+  async updateUser(userData: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone_number: string;
+  }) {
+    return this.request<{ data: User }>(`/api/admin/users`, {
+      method: "PUT",
+      body: JSON.stringify(userData),
+    });
+  }
+
+  async changePassword(data: {
+    current_password: string;
+    new_password: string;
+  }) {
+    return this.request<{ data: User }>(`/api/admin/users/password`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getUserOrders(userId: string) {
+    return this.request<{ data: Order[] }>(`/api/admin/users/${userId}/orders`);
+  }
+
   // Admin: Upload logo
   async uploadImage(formData: FormData) {
     return this.request<{

@@ -143,8 +143,7 @@ export default function SettingsPage() {
       return response.data.url; // Adjust based on your API response
     },
     onSuccess: (path) => {
-      const url = `${API_URL}${path}`;
-      setLogoPreview(url);
+      setLogoPreview(path);
       //update store settings with new logo URL
       updateSettingMutation.mutate({
         key: "store",
@@ -153,7 +152,8 @@ export default function SettingsPage() {
           description: storeValue.description,
           currency: storeValue.currency,
           free_delivery_threshold: storeValue.free_delivery_threshold,
-          logo: url,
+          logo: path,
+          announcement: storeValue.announcement,
         }),
       });
       toast.success("Logo uploaded successfully");
@@ -182,6 +182,7 @@ export default function SettingsPage() {
           formData.get("free_delivery_threshold"),
         ),
         logo: logoPreview || storeValue?.logo || "",
+        announcement: formData.get("announcement") as string,
       }),
     });
   };
@@ -320,19 +321,19 @@ export default function SettingsPage() {
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="store">
             <Store className="mr-2 h-4 w-4" />
-            Store
+            <span className="hidden md:inline">Store</span>
           </TabsTrigger>
           <TabsTrigger value="social">
             <Facebook className="mr-2 h-4 w-4" />
-            Social Media
+            <span className="hidden md:inline">Social Media</span>
           </TabsTrigger>
           <TabsTrigger value="whatsapp">
             <MessageCircle className="mr-2 h-4 w-4" />
-            WhatsApp
+            <span className="hidden md:inline">WhatsApp</span>
           </TabsTrigger>
           <TabsTrigger value="email">
             <Mail className="mr-2 h-4 w-4" />
-            Email
+            <span className="hidden md:inline">Email</span>
           </TabsTrigger>
         </TabsList>
 
@@ -357,7 +358,7 @@ export default function SettingsPage() {
                       ) : logoPreview || storeValue?.logo ? (
                         <>
                           <img
-                            src={logoPreview || storeValue?.logo}
+                            src={API_URL + (logoPreview || storeValue?.logo)}
                             alt="Store logo"
                             className="h-full w-full object-cover"
                           />
@@ -411,6 +412,7 @@ export default function SettingsPage() {
                     name="description"
                     defaultValue={storeValue?.description || ""}
                     placeholder="Tell customers about your store..."
+                    maxLength={255}
                     rows={4}
                   />
                 </div>
@@ -443,6 +445,22 @@ export default function SettingsPage() {
                   <p className="text-xs text-muted-foreground">
                     Orders above this amount get free delivery
                   </p>
+                </div>
+
+                {/* Store Announcement */}
+                <div className="space-y-2">
+                  <Label htmlFor="announcement">Store Announcement</Label>
+                  <Textarea
+                    id="announcement"
+                    name="announcement"
+                    rows={2}
+                    maxLength={155}
+                    defaultValue={storeValue?.announcement || ""}
+                    placeholder={
+                      storeValue?.announcement || "Welcome to ÉLÉGANCE!"
+                    }
+                    required
+                  />
                 </div>
 
                 <Button
