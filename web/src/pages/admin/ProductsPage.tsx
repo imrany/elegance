@@ -36,8 +36,6 @@ import SidePanel, {
   PanelTitle,
   PanelDescription,
   PanelBody,
-  PanelFooter,
-  PanelClose,
 } from "@/components/common/SidePanel";
 
 export default function ProductsPage() {

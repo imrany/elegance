@@ -10,6 +10,14 @@ import {
   Trash2Icon,
 } from "lucide-react";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   formatPrice,
   formatShortDate,
   getPaymentBadge,
@@ -39,6 +47,7 @@ import SidePanel, {
   PanelTitle,
   PanelDescription,
   PanelBody,
+  PanelClose,
 } from "@/components/common/SidePanel";
 import { Separator } from "@/components/ui/separator";
 
@@ -48,6 +57,7 @@ export default function OrdersAdminPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isSelectedOrder, setIsSelectedOrder] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ["admin-orders"],
@@ -90,6 +100,24 @@ export default function OrdersAdminPage() {
       toast.error(error.message);
     },
   });
+
+  const deleteOrderMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await api.deleteOrder(id);
+      if (!data) throw new Error("Failed to delete order");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+      toast.success("Order deleted");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const handleDeleteOrder = (id: string) => {
+    deleteOrderMutation.mutate(id);
+  };
 
   const filteredOrders = orders?.filter((order) => {
     const matchesSearch =
@@ -269,146 +297,200 @@ export default function OrdersAdminPage() {
 
       {/* Order Details Panel */}
       {selectedOrder && (
-        <SidePanel isOpen={isSelectedOrder} onOpenChange={setIsSelectedOrder}>
-          <PanelHeader>
-            <div className="flex items-start justify-between">
-              <div>
-                <PanelTitle>
-                  Order #{selectedOrder.id?.substring(0, 8)}
-                </PanelTitle>
-                <PanelDescription>
-                  {formatShortDate(selectedOrder.created_at)}
-                </PanelDescription>
-              </div>
-              <div className="text-right space-y-1">
-                <span
-                  className={`inline-block rounded-full px-3 py-1 text-xs font-medium ${getStatusBadge(selectedOrder.status).color}`}
-                >
-                  {getStatusBadge(selectedOrder.status).label}
-                </span>
-                <br />
-                <span
-                  className={`inline-block rounded-full px-3 py-1 text-xs font-medium ${getPaymentBadge(selectedOrder.payment_status).color}`}
-                >
-                  {getPaymentBadge(selectedOrder.payment_status).label}
-                </span>
-              </div>
-            </div>
-          </PanelHeader>
-          <PanelBody>
-            <div className="flex flex-col gap-4">
-              {/* Items */}
-              <div>
-                <h3 className="mb-3 font-medium">Order Items</h3>
-                <div className="space-y-3">
-                  {selectedOrder.items.map((item, index) => (
-                    <div key={index} className="flex gap-3">
-                      <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded border border-border bg-secondary">
-                        <img
-                          src={item.image || "/placeholder.svg"}
-                          alt={item.name}
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium">{item.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Qty: {item.quantity}
-                          {item.size && ` · Size: ${item.size}`}
-                          {item.color && ` · Color: ${item.color}`}
-                        </p>
-                        <p className="mt-1 font-medium">
-                          {formatPrice(item.price * item.quantity)}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+        <>
+          <SidePanel isOpen={isSelectedOrder} onOpenChange={setIsSelectedOrder}>
+            <PanelHeader>
+              <div className="flex items-start justify-between">
+                <div>
+                  <PanelTitle>
+                    Order #{selectedOrder.id?.substring(0, 8)}
+                  </PanelTitle>
+                  <PanelDescription>
+                    {formatShortDate(selectedOrder.created_at)}
+                  </PanelDescription>
                 </div>
-              </div>
-
-              <Separator />
-
-              {/* Order Summary */}
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Subtotal</span>
-                  <span>{formatPrice(selectedOrder.subtotal)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Delivery Fee</span>
-                  <span>
-                    {selectedOrder.delivery_fee === 0 ? (
-                      <span className="font-medium text-green-600">FREE</span>
-                    ) : (
-                      formatPrice(selectedOrder.delivery_fee)
-                    )}
+                <div className="text-right space-y-1">
+                  <span
+                    className={`inline-block rounded-full px-3 py-1 text-xs font-medium ${getStatusBadge(selectedOrder.status).color}`}
+                  >
+                    {getStatusBadge(selectedOrder.status).label}
+                  </span>
+                  <br />
+                  <span
+                    className={`inline-block rounded-full px-3 py-1 text-xs font-medium ${getPaymentBadge(selectedOrder.payment_status).color}`}
+                  >
+                    {getPaymentBadge(selectedOrder.payment_status).label}
                   </span>
                 </div>
-                <div className="flex justify-between text-base font-bold">
-                  <span>Total</span>
-                  <span>{formatPrice(selectedOrder.total)}</span>
-                </div>
               </div>
-
-              <Separator />
-
-              {/* Shipping & Contact Info */}
-              <div className="grid gap-4 sm:grid-cols-2">
+            </PanelHeader>
+            <PanelBody>
+              <div className="flex flex-col gap-4">
+                {/* Items */}
                 <div>
-                  <h3 className="mb-2 flex items-center gap-2 text-sm font-medium">
-                    <MapPin className="h-4 w-4" />
-                    Shipping Address
-                  </h3>
-                  <p className="text-sm">
-                    {selectedOrder.customer.first_name}{" "}
-                    {selectedOrder.customer.last_name}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedOrder.shipping.address}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedOrder.shipping.city}
-                    {selectedOrder.shipping.postalCode &&
-                      `, ${selectedOrder.shipping.postalCode}`}
-                  </p>
+                  <h3 className="mb-3 font-medium">Order Items</h3>
+                  <div className="space-y-3">
+                    {selectedOrder.items.map((item, index) => (
+                      <div key={index} className="flex gap-3">
+                        <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded border border-border bg-secondary">
+                          <img
+                            src={item.image || "/placeholder.svg"}
+                            alt={item.name}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium">{item.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Qty: {item.quantity}
+                            {item.size && ` · Size: ${item.size}`}
+                            {item.color && ` · Color: ${item.color}`}
+                          </p>
+                          <p className="mt-1 font-medium">
+                            {formatPrice(item.price * item.quantity)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
-                <div>
-                  <h3 className="mb-2 flex items-center gap-2 text-sm font-medium">
-                    <Phone className="h-4 w-4" />
-                    Contact Info
-                  </h3>
-                  <p className="text-sm">{selectedOrder.customer.email}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedOrder.customer.phone_number}
-                  </p>
-                </div>
-              </div>
+                <Separator />
 
-              {selectedOrder.notes && (
-                <>
-                  <Separator />
+                {/* Order Summary */}
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span>{formatPrice(selectedOrder.subtotal)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Delivery Fee</span>
+                    <span>
+                      {selectedOrder.delivery_fee === 0 ? (
+                        <span className="font-medium text-green-600">FREE</span>
+                      ) : (
+                        formatPrice(selectedOrder.delivery_fee)
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-base font-bold">
+                    <span>Total</span>
+                    <span>{formatPrice(selectedOrder.total)}</span>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Shipping & Contact Info */}
+                <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <h3 className="mb-2 text-sm font-medium">Delivery Notes</h3>
+                    <h3 className="mb-2 flex items-center gap-2 text-sm font-medium">
+                      <MapPin className="h-4 w-4" />
+                      Shipping Address
+                    </h3>
+                    <p className="text-sm">
+                      {selectedOrder.customer.first_name}{" "}
+                      {selectedOrder.customer.last_name}
+                    </p>
                     <p className="text-sm text-muted-foreground">
-                      {selectedOrder.notes}
+                      {selectedOrder.shipping.address}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedOrder.shipping.city}
+                      {selectedOrder.shipping.postalCode &&
+                        `, ${selectedOrder.shipping.postalCode}`}
                     </p>
                   </div>
-                </>
-              )}
 
-              {/*delete order*/}
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => setIsSelectedOrder(!isSelectedOrder)}
-              >
-                <Trash2Icon className="h-4 w-4 mr-2" />
-                Delete Order
-              </Button>
-            </div>
-          </PanelBody>
-        </SidePanel>
+                  <div>
+                    <h3 className="mb-2 flex items-center gap-2 text-sm font-medium">
+                      <Phone className="h-4 w-4" />
+                      Contact Info
+                    </h3>
+                    <p className="text-sm">{selectedOrder.customer.email}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedOrder.customer.phone_number}
+                    </p>
+                  </div>
+                </div>
+
+                {selectedOrder.notes && (
+                  <>
+                    <Separator />
+                    <div>
+                      <h3 className="mb-2 text-sm font-medium">
+                        Delivery Notes
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedOrder.notes}
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                {/*delete order*/}
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => {
+                    setIsSelectedOrder(false);
+                    setIsDeleteDialogOpen(true);
+                  }}
+                >
+                  <Trash2Icon className="h-4 w-4 mr-2" />
+                  Delete Order
+                </Button>
+              </div>
+            </PanelBody>
+          </SidePanel>
+
+          {/* Delete order Dialog */}
+          <Dialog
+            open={isDeleteDialogOpen}
+            onOpenChange={setIsDeleteDialogOpen}
+          >
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Delete Order</DialogTitle>
+                <DialogDescription>
+                  Are you sure you want to delete this order? This action cannot
+                  be undone.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md">
+                  <p className="text-sm">
+                    <strong>Order ID:</strong> {selectedOrder?.id}
+                  </p>
+                  <p className="text-sm mt-2">
+                    All data associated with this order will be deleted from the
+                    system.
+                  </p>
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsDeleteDialogOpen(false)}
+                  disabled={deleteOrderMutation.isPending}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => handleDeleteOrder(selectedOrder?.id)}
+                  disabled={deleteOrderMutation.isPending}
+                >
+                  {deleteOrderMutation.isPending
+                    ? "Deleting..."
+                    : "Delete Order"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </>
       )}
     </div>
   );
