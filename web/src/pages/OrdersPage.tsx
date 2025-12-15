@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,14 +11,20 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
-import { Order } from "@/lib/api";
-import { formatPrice, formatShortDate } from "@/lib/utils";
+import { api, Order } from "@/lib/api";
+import {
+  formatPrice,
+  formatShortDate,
+  getPaymentBadge,
+  getStatusBadge,
+  statusColors,
+} from "@/lib/utils";
 import {
   ShoppingBag,
   Package,
@@ -27,19 +33,72 @@ import {
   Eye,
   Calendar,
   CreditCard,
+  Download,
+  X,
   MapPin,
   Phone,
-  Download,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useOrder } from "@/contexts/OrderContext";
+import SidePanel, {
+  PanelHeader,
+  PanelTitle,
+  PanelDescription,
+  PanelBody,
+  PanelFooter,
+  PanelClose,
+} from "@/components/common/SidePanel";
+import { Badge } from "@/components/ui/badge";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 export default function OrdersPage() {
-  const { orders, isLoading, orderCount, orderStatusCount, totalSpent } =
-    useOrder();
+  const {
+    orders,
+    isLoading,
+    orderCount,
+    orderStatusCount,
+    totalSpent,
+    getOrders,
+  } = useOrder();
   const [search, setSearch] = useState("");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const currentOrder = orders?.find((order) => order.id === id);
+
+      if (!currentOrder) {
+        throw new Error("Order not found in local cache.");
+      }
+
+      const updatePayload: { status: string; payment_status: string } = {
+        status: status,
+        payment_status: currentOrder.payment_status,
+      };
+
+      if (status === "cancelled" && currentOrder.payment_status !== "paid") {
+        updatePayload.payment_status = "failed";
+      } else if (
+        status !== "delivered" &&
+        currentOrder.payment_status !== "failed"
+      ) {
+        updatePayload.payment_status = "paid";
+      }
+      const { data } = await api.updateOrder(id, updatePayload);
+      if (!data) throw new Error("Failed to update order status");
+    },
+    onSuccess: () => {
+      getOrders();
+      toast.success("Order status updated");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
 
   // Filter orders by search
   const filteredOrders = orders?.filter((order) => {
@@ -50,71 +109,6 @@ export default function OrdersPage() {
       order.items.some((item) => item.name.toLowerCase().includes(searchLower))
     );
   });
-
-  // Get status badge variant
-  const getStatusBadge = (status: string) => {
-    const variants: Record<
-      string,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      { variant: any; label: string; color: string }
-    > = {
-      pending: {
-        variant: "secondary",
-        label: "Pending",
-        color:
-          "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
-      },
-      processing: {
-        variant: "default",
-        label: "Processing",
-        color:
-          "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
-      },
-      shipped: {
-        variant: "default",
-        label: "Shipped",
-        color:
-          "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
-      },
-      delivered: {
-        variant: "default",
-        label: "Delivered",
-        color:
-          "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
-      },
-      cancelled: {
-        variant: "destructive",
-        label: "Cancelled",
-        color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
-      },
-    };
-    return (
-      variants[status] || { variant: "secondary", label: status, color: "" }
-    );
-  };
-
-  // Get payment status badge
-  const getPaymentBadge = (status: string) => {
-    const variants: Record<string, { label: string; color: string }> = {
-      pending: {
-        label: "Payment Pending",
-        color:
-          "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
-      },
-      paid: {
-        label: "Paid",
-        color:
-          "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
-      },
-      failed: {
-        label: "Failed",
-        color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
-      },
-    };
-    return (
-      variants[status] || { label: status, color: "bg-gray-100 text-gray-800" }
-    );
-  };
 
   const handleViewOrder = (order: Order) => {
     setSelectedOrder(order);
@@ -287,18 +281,54 @@ export default function OrdersPage() {
                             </div>
                           )}
                         </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-foreground">
-                            {order.items.length}{" "}
-                            {order.items.length === 1 ? "item" : "items"}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {order.items
-                              .slice(0, 2)
-                              .map((item) => item.name)
-                              .join(", ")}
-                            {order.items.length > 2 && "..."}
-                          </p>
+                        <div className="flex-1 flex justify-between w-full">
+                          <div>
+                            <p className="text-sm font-medium text-foreground">
+                              {order.items.length}{" "}
+                              {order.items.length === 1 ? "item" : "items"}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {order.items
+                                .slice(0, 2)
+                                .map((item) => item.name)
+                                .join(", ")}
+                              {order.items.length > 2 && "..."}
+                            </p>
+                          </div>
+                          {order.status !== "delivered" &&
+                            order.status !== "cancelled" &&
+                            order.status !== "shipped" && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <button className="flex items-center gap-1">
+                                    <Badge
+                                      className={`capitalize ${statusColors[order.status] || ""}`}
+                                      variant="secondary"
+                                    >
+                                      {order.status}
+                                    </Badge>
+
+                                    <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                                  </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent>
+                                  {["delivered", "cancelled"].map((status) => (
+                                    <DropdownMenuItem
+                                      key={status}
+                                      onClick={() =>
+                                        updateStatusMutation.mutate({
+                                          id: order.id,
+                                          status,
+                                        })
+                                      }
+                                      className="capitalize"
+                                    >
+                                      {status}
+                                    </DropdownMenuItem>
+                                  ))}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
                         </div>
                       </div>
 
@@ -338,42 +368,36 @@ export default function OrdersPage() {
           </div>
         )}
 
-        {/* Order Details Dialog */}
-        <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-          <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Order Details</DialogTitle>
-            </DialogHeader>
-
-            {selectedOrder && (
-              <div className="space-y-4 mt-4">
-                {/* Order Header */}
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-lg font-semibold">
-                      Order #{selectedOrder.id?.substring(0, 8)}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {formatShortDate(selectedOrder.created_at)}
-                    </p>
-                  </div>
-                  <div className="text-right space-y-1">
-                    <span
-                      className={`inline-block rounded-full px-3 py-1 text-xs font-medium ${getStatusBadge(selectedOrder.status).color}`}
-                    >
-                      {getStatusBadge(selectedOrder.status).label}
-                    </span>
-                    <br />
-                    <span
-                      className={`inline-block rounded-full px-3 py-1 text-xs font-medium ${getPaymentBadge(selectedOrder.payment_status).color}`}
-                    >
-                      {getPaymentBadge(selectedOrder.payment_status).label}
-                    </span>
-                  </div>
+        {/* Order Details SidePanel */}
+        {selectedOrder && (
+          <SidePanel isOpen={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+            <PanelHeader>
+              <div className="flex items-start justify-between">
+                <div>
+                  <PanelTitle>
+                    Order #{selectedOrder.id?.substring(0, 8)}
+                  </PanelTitle>
+                  <PanelDescription>
+                    {formatShortDate(selectedOrder.created_at)}
+                  </PanelDescription>
                 </div>
-
-                <Separator />
-
+                <div className="text-right space-y-1">
+                  <span
+                    className={`inline-block rounded-full px-3 py-1 text-xs font-medium ${getStatusBadge(selectedOrder.status).color}`}
+                  >
+                    {getStatusBadge(selectedOrder.status).label}
+                  </span>
+                  <br />
+                  <span
+                    className={`inline-block rounded-full px-3 py-1 text-xs font-medium ${getPaymentBadge(selectedOrder.payment_status).color}`}
+                  >
+                    {getPaymentBadge(selectedOrder.payment_status).label}
+                  </span>
+                </div>
+              </div>
+            </PanelHeader>
+            <PanelBody>
+              <div className="flex flex-col gap-4">
                 {/* Items */}
                 <div>
                   <h3 className="mb-3 font-medium">Order Items</h3>
@@ -421,7 +445,6 @@ export default function OrdersPage() {
                       )}
                     </span>
                   </div>
-                  <Separator />
                   <div className="flex justify-between text-base font-bold">
                     <span>Total</span>
                     <span>{formatPrice(selectedOrder.total)}</span>
@@ -476,27 +499,21 @@ export default function OrdersPage() {
                     </div>
                   </>
                 )}
-
-                {/* Actions */}
-                <div className="flex gap-2">
-                  <Button asChild variant="outline" className="flex-1">
-                    <Link to={`/order-confirmation/${selectedOrder.id}`}>
-                      <Eye className="mr-2 h-4 w-4" />
-                      View Full Details
-                    </Link>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => handleDownloadInvoice(selectedOrder.id!)}
-                  >
-                    <Download className="mr-2 h-4 w-4" />
-                    Invoice
-                  </Button>
-                </div>
               </div>
-            )}
-          </DialogContent>
-        </Dialog>
+              <Button
+                onClick={() =>
+                  navigate(`/order-confirmation/${selectedOrder.id}`)
+                }
+                size="sm"
+                className="flex-1 w-full mt-3 bg-accent text-accent-foreground"
+                variant="outline"
+              >
+                <Eye className="mr-2 h-4 w-4" />
+                Order Confirmation
+              </Button>
+            </PanelBody>
+          </SidePanel>
+        )}
       </div>
     </Layout>
   );

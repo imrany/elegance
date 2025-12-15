@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSiteSetting } from "@/hooks/useSiteSetting";
@@ -28,7 +27,7 @@ export function WhatsAppButton() {
           href={whatsappUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="fixed bottom-6 right-6 z-50"
+          className="fixed bottom-6 right-6 z-40"
         >
           <Button
             size="sm"

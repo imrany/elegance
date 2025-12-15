@@ -35,7 +35,7 @@ export function Header() {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
   const { itemCount } = useCart();
-  const { orderCount } = useOrder();
+  const { orderStatusCount } = useOrder();
   const { user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
   const { data: setting, isLoading } = useSiteSetting("store");
@@ -171,9 +171,14 @@ export function Header() {
               <Button variant="ghost" size="icon" className="relative" asChild>
                 <Link to="/orders">
                   <ShoppingCart className="h-5 w-5" />
-                  {orderCount > 0 && (
+                  {(orderStatusCount?.pending ?? 0) +
+                    (orderStatusCount?.processing ?? 0) +
+                    (orderStatusCount?.shipped ?? 0) >
+                    0 && (
                     <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-[10px] font-medium text-accent-foreground">
-                      {orderCount}
+                      {(orderStatusCount?.pending ?? 0) +
+                        (orderStatusCount?.processing ?? 0) +
+                        (orderStatusCount?.shipped ?? 0)}
                     </span>
                   )}
                   <span className="sr-only">Orders page</span>

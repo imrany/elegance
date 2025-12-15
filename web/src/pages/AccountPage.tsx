@@ -44,6 +44,7 @@ interface PasswordFormData {
 export default function AccountPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState("profile");
 
   const [profileData, setProfileData] = useState<ProfileFormData>({
     firstName: user?.first_name || "",
@@ -110,8 +111,10 @@ export default function AccountPage() {
         newPassword: "",
         confirmPassword: "",
       });
-      toast.success("Password changed successfully");
-      setTimeout(() => setShowPasswordSuccess(false), 5000);
+      setTimeout(() => {
+        setShowPasswordSuccess(false);
+        setActiveTab("profile");
+      }, 3000);
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onError: (error: any) => {
@@ -171,7 +174,11 @@ export default function AccountPage() {
           </p>
         </div>
 
-        <Tabs defaultValue="profile" className="space-y-6">
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="space-y-6 mt-2"
+        >
           <TabsList>
             <TabsTrigger value="profile">
               <User className="mr-2 h-4 w-4" />

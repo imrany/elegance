@@ -294,7 +294,7 @@ class ApiClient {
       payment_status: string;
     },
   ) {
-    return this.request<{ data: Order }>(`/api/orders/${id}/status`, {
+    return this.request<{ data: Order }>(`/api/admin/orders/${id}/status`, {
       method: "PUT",
       body: JSON.stringify(orderStatus),
     });
@@ -306,10 +306,11 @@ class ApiClient {
     });
   }
 
-  async updateOrder(id: string, orderData: Order) {
-    return this.request<{ data: Order }>(`/api/orders/${id}`, {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async updateOrder(order_id: string, updatedPayload: any) {
+    return this.request<{ data: Order }>(`/api/orders/${order_id}`, {
       method: "PUT",
-      body: JSON.stringify(orderData),
+      body: JSON.stringify(updatedPayload),
     });
   }
 

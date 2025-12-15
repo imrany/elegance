@@ -1,17 +1,24 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Search, ChevronDown, MoreVerticalIcon } from "lucide-react";
-import { formatPrice, statusColors } from "@/lib/utils";
+import {
+  Search,
+  ChevronDown,
+  MoreVerticalIcon,
+  Phone,
+  MapPin,
+  Trash2Icon,
+} from "lucide-react";
+import {
+  formatPrice,
+  formatShortDate,
+  getPaymentBadge,
+  getStatusBadge,
+  statusColors,
+} from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,12 +34,20 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { api, Order } from "@/lib/api";
+import SidePanel, {
+  PanelHeader,
+  PanelTitle,
+  PanelDescription,
+  PanelBody,
+} from "@/components/common/SidePanel";
+import { Separator } from "@/components/ui/separator";
 
 export default function OrdersAdminPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [isSelectedOrder, setIsSelectedOrder] = useState(false);
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ["admin-orders"],
@@ -45,10 +60,26 @@ export default function OrdersAdminPage() {
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { data } = await api.updateOrderStatus(id, {
-        status,
-        payment_status: status === "cancelled" ? "cancelled" : "paid",
-      });
+      const currentOrder = orders?.find((order) => order.id === id);
+
+      if (!currentOrder) {
+        throw new Error("Order not found in local cache.");
+      }
+
+      const updatePayload: { status: string; payment_status: string } = {
+        status: status,
+        payment_status: currentOrder.payment_status,
+      };
+
+      if (status === "cancelled" && currentOrder.payment_status !== "paid") {
+        updatePayload.payment_status = "failed";
+      } else if (
+        status !== "delivered" &&
+        currentOrder.payment_status !== "failed"
+      ) {
+        updatePayload.payment_status = "paid";
+      }
+      const { data } = await api.updateOrderStatus(id, updatePayload);
       if (!data) throw new Error("Failed to update order status");
     },
     onSuccess: () => {
@@ -219,7 +250,10 @@ export default function OrdersAdminPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => setSelectedOrder(order)}
+                          onClick={() => {
+                            setIsSelectedOrder(!isSelectedOrder);
+                            setSelectedOrder(order);
+                          }}
                         >
                           <MoreVerticalIcon className="h-4 w-4" />
                         </Button>
@@ -233,100 +267,149 @@ export default function OrdersAdminPage() {
         </div>
       </div>
 
-      {/* Order Details Dialog */}
-      <Dialog
-        open={!!selectedOrder}
-        onOpenChange={() => setSelectedOrder(null)}
-      >
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Order #{selectedOrder?.id.slice(0, 8)}</DialogTitle>
-          </DialogHeader>
-          {selectedOrder && (
-            <div className="space-y-6">
-              {/* Customer Info */}
-              <div className="rounded-lg border border-border p-4">
-                <h3 className="font-medium text-foreground">
-                  Customer Details
-                </h3>
-                <div className="mt-2 space-y-1 text-sm">
-                  <p>
-                    <span className="text-muted-foreground">Name:</span>{" "}
-                    {selectedOrder.customer.first_name}
-                  </p>
-                  <p>
-                    <span className="text-muted-foreground">Email:</span>{" "}
-                    {selectedOrder.customer.email}
-                  </p>
-                  <p>
-                    <span className="text-muted-foreground">Phone:</span>{" "}
-                    {selectedOrder.customer.phone_number}
-                  </p>
-                  <p>
-                    <span className="text-muted-foreground">Address:</span>{" "}
-                    {selectedOrder.shipping.address}
-                  </p>
-                </div>
+      {/* Order Details Panel */}
+      {selectedOrder && (
+        <SidePanel isOpen={isSelectedOrder} onOpenChange={setIsSelectedOrder}>
+          <PanelHeader>
+            <div className="flex items-start justify-between">
+              <div>
+                <PanelTitle>
+                  Order #{selectedOrder.id?.substring(0, 8)}
+                </PanelTitle>
+                <PanelDescription>
+                  {formatShortDate(selectedOrder.created_at)}
+                </PanelDescription>
               </div>
-
-              {/* Order Items */}
-              <div className="rounded-lg border border-border p-4">
-                <h3 className="font-medium text-foreground">Order Items</h3>
-                <div className="mt-2 divide-y divide-border">
-                  {/*eslint-disable-next-line @typescript-eslint/no-explicit-any*/}
-                  {selectedOrder.items.map((item: any, idx: number) => (
-                    <div
-                      key={idx}
-                      className="flex justify-between py-2 text-sm"
-                    >
-                      <span>
-                        {item.name} × {item.quantity}
-                        {item.size && ` (${item.size})`}
-                        {item.color && ` - ${item.color}`}
-                      </span>
-                      <span className="font-medium">
-                        {formatPrice(item.price * item.quantity)}
-                      </span>
+              <div className="text-right space-y-1">
+                <span
+                  className={`inline-block rounded-full px-3 py-1 text-xs font-medium ${getStatusBadge(selectedOrder.status).color}`}
+                >
+                  {getStatusBadge(selectedOrder.status).label}
+                </span>
+                <br />
+                <span
+                  className={`inline-block rounded-full px-3 py-1 text-xs font-medium ${getPaymentBadge(selectedOrder.payment_status).color}`}
+                >
+                  {getPaymentBadge(selectedOrder.payment_status).label}
+                </span>
+              </div>
+            </div>
+          </PanelHeader>
+          <PanelBody>
+            <div className="flex flex-col gap-4">
+              {/* Items */}
+              <div>
+                <h3 className="mb-3 font-medium">Order Items</h3>
+                <div className="space-y-3">
+                  {selectedOrder.items.map((item, index) => (
+                    <div key={index} className="flex gap-3">
+                      <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded border border-border bg-secondary">
+                        <img
+                          src={item.image || "/placeholder.svg"}
+                          alt={item.name}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium">{item.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Qty: {item.quantity}
+                          {item.size && ` · Size: ${item.size}`}
+                          {item.color && ` · Color: ${item.color}`}
+                        </p>
+                        <p className="mt-1 font-medium">
+                          {formatPrice(item.price * item.quantity)}
+                        </p>
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
 
+              <Separator />
+
               {/* Order Summary */}
-              <div className="rounded-lg border border-border p-4">
-                <h3 className="font-medium text-foreground">Order Summary</h3>
-                <div className="mt-2 space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Subtotal</span>
-                    <span>{formatPrice(selectedOrder.subtotal)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Delivery</span>
-                    <span>
-                      {selectedOrder.delivery_fee === 0
-                        ? "FREE"
-                        : formatPrice(selectedOrder.delivery_fee)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between border-t border-border pt-2 font-medium">
-                    <span>Total</span>
-                    <span>{formatPrice(selectedOrder.total)}</span>
-                  </div>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Subtotal</span>
+                  <span>{formatPrice(selectedOrder.subtotal)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Delivery Fee</span>
+                  <span>
+                    {selectedOrder.delivery_fee === 0 ? (
+                      <span className="font-medium text-green-600">FREE</span>
+                    ) : (
+                      formatPrice(selectedOrder.delivery_fee)
+                    )}
+                  </span>
+                </div>
+                <div className="flex justify-between text-base font-bold">
+                  <span>Total</span>
+                  <span>{formatPrice(selectedOrder.total)}</span>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Shipping & Contact Info */}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <h3 className="mb-2 flex items-center gap-2 text-sm font-medium">
+                    <MapPin className="h-4 w-4" />
+                    Shipping Address
+                  </h3>
+                  <p className="text-sm">
+                    {selectedOrder.customer.first_name}{" "}
+                    {selectedOrder.customer.last_name}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedOrder.shipping.address}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedOrder.shipping.city}
+                    {selectedOrder.shipping.postalCode &&
+                      `, ${selectedOrder.shipping.postalCode}`}
+                  </p>
+                </div>
+
+                <div>
+                  <h3 className="mb-2 flex items-center gap-2 text-sm font-medium">
+                    <Phone className="h-4 w-4" />
+                    Contact Info
+                  </h3>
+                  <p className="text-sm">{selectedOrder.customer.email}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedOrder.customer.phone_number}
+                  </p>
                 </div>
               </div>
 
               {selectedOrder.notes && (
-                <div className="rounded-lg border border-border p-4">
-                  <h3 className="font-medium text-foreground">Notes</h3>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {selectedOrder.notes}
-                  </p>
-                </div>
+                <>
+                  <Separator />
+                  <div>
+                    <h3 className="mb-2 text-sm font-medium">Delivery Notes</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedOrder.notes}
+                    </p>
+                  </div>
+                </>
               )}
+
+              {/*delete order*/}
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setIsSelectedOrder(!isSelectedOrder)}
+              >
+                <Trash2Icon className="h-4 w-4 mr-2" />
+                Delete Order
+              </Button>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+          </PanelBody>
+        </SidePanel>
+      )}
     </div>
   );
 }

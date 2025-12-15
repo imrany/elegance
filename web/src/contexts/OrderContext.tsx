@@ -69,7 +69,8 @@ export function OrderProvider({ children }: { children: ReactNode }) {
   }
 
   // Calculate stats
-  const orderCount = orders?.length || 0;
+  const orderCount = useMemo(() => orders?.length || 0, [orders]);
+
   const orderStatusCount = useMemo(
     () =>
       orders?.reduce(

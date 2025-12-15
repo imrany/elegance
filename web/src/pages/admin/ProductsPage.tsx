@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Plus,
   Pencil,
@@ -31,6 +31,14 @@ import { useCategories } from "@/hooks/useCategories";
 import { ProductForm } from "@/components/ProductForm";
 import { cn } from "@/lib/utils";
 import { is } from "zod/v4/locales";
+import SidePanel, {
+  PanelHeader,
+  PanelTitle,
+  PanelDescription,
+  PanelBody,
+  PanelFooter,
+  PanelClose,
+} from "@/components/common/SidePanel";
 
 export default function ProductsPage() {
   const queryClient = useQueryClient();
@@ -89,7 +97,8 @@ export default function ProductsPage() {
       <div
         className={cn(
           "flex-1 space-y-6 transition-all duration-300",
-          isPanelOpen ? "mr-0 lg:mr-[600px]" : "mr-0",
+          // isPanelOpen ? "mr-0 lg:mr-[600px]" : "mr-0",
+          "mr-0",
         )}
       >
         {/* Header */}
@@ -342,65 +351,36 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      {/* Side Panel Overlay for Mobile */}
-      {isPanelOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
-          onClick={handleClosePanel}
-        />
-      )}
-
       {/* Side Panel */}
-      <div
-        className={cn(
-          "fixed right-0 top-0 z-50 h-full w-full transform border-l border-border bg-background shadow-xl transition-transform duration-300 sm:w-[500px] lg:w-[600px]",
-          isPanelOpen ? "translate-x-0" : "translate-x-full",
-        )}
-      >
-        <div className="flex h-full flex-col">
-          {/* Panel Header */}
-          <div className="flex items-center justify-between border-b border-border px-6 py-4">
-            <div>
-              <h2 className="text-lg font-semibold text-foreground">
-                {editingProduct ? "Edit Product" : "Add New Product"}
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                {editingProduct
-                  ? "Update product information"
-                  : "Create a new product listing"}
-              </p>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleClosePanel}
-              className="h-8 w-8"
-            >
-              <X className="h-4 w-4" />
-              <span className="sr-only">Close panel</span>
-            </Button>
-          </div>
-
-          {/* Panel Content */}
-          <div className="flex-1 overflow-y-auto px-6 py-6">
-            <ProductForm
-              product={editingProduct}
-              categories={categories || []}
-              onSuccess={() => {
-                handleClosePanel();
-                queryClient.invalidateQueries({
-                  queryKey: ["admin-products"],
-                });
-                toast.success(
-                  editingProduct
-                    ? "Product updated successfully"
-                    : "Product created successfully",
-                );
-              }}
-            />
-          </div>
-        </div>
-      </div>
+      <SidePanel isOpen={isPanelOpen} onOpenChange={setIsPanelOpen}>
+        <PanelHeader>
+          <PanelTitle>
+            {editingProduct ? "Edit Product" : "Add New Product"}
+          </PanelTitle>
+          <PanelDescription>
+            {editingProduct
+              ? "Update product information"
+              : "Create a new product listing"}
+          </PanelDescription>
+        </PanelHeader>
+        <PanelBody>
+          <ProductForm
+            product={editingProduct}
+            categories={categories || []}
+            onSuccess={() => {
+              handleClosePanel();
+              queryClient.invalidateQueries({
+                queryKey: ["admin-products"],
+              });
+              toast.success(
+                editingProduct
+                  ? "Product updated successfully"
+                  : "Product created successfully",
+              );
+            }}
+          />
+        </PanelBody>
+      </SidePanel>
     </div>
   );
 }

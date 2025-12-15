@@ -69,13 +69,32 @@ func (h *Handler) GetOrdersByOption(c *gin.Context) {
 	utils.SuccessResponse(c, http.StatusOK, orders)
 }
 
-// UpdateOrder handles PUT /api/orders
+// UpdateOrder handles PUT /api/orders/:id
 func (h *Handler) UpdateOrder(c *gin.Context) {
-	var order models.Order
-	if err := c.ShouldBindJSON(&order); err != nil {
+	order_id := c.Param("id")
+
+	var updatedPayload models.Order
+	if err := c.ShouldBindJSON(&updatedPayload); err != nil {
 		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
+
+	orders, err := h.db.GetOrdersByOption("id", &order_id)
+	if err != nil {
+		if err.Error() == "order not found" || err == sql.ErrNoRows {
+			utils.ErrorResponse(c, http.StatusNotFound, "Order not found", err)
+			return
+		}
+		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch order", err)
+		return
+	}
+
+	order := orders[0]
+	order.Status = updatedPayload.Status
+	order.PaymentStatus = updatedPayload.PaymentStatus
+	order.Shipping.Address = updatedPayload.Shipping.Address
+	order.Shipping.City = updatedPayload.Shipping.City
+	order.Shipping.PostalCode = updatedPayload.Shipping.PostalCode
 
 	if err := h.db.UpdateOrder(&order); err != nil {
 		if err.Error() == "order not found" || err == sql.ErrNoRows {
