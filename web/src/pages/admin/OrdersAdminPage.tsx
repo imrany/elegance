@@ -119,16 +119,19 @@ export default function OrdersAdminPage() {
     deleteOrderMutation.mutate(id);
   };
 
-  const filteredOrders = orders?.filter((order) => {
-    const matchesSearch =
-      order.customer.first_name.toLowerCase().includes(search.toLowerCase()) ||
-      order.customer.last_name.toLowerCase().includes(search.toLowerCase()) ||
-      order.customer.email.toLowerCase().includes(search.toLowerCase()) ||
-      order.id.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus =
-      statusFilter === "all" || order.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const filteredOrders =
+    orders?.filter((order) => {
+      const matchesSearch =
+        order.customer.first_name
+          .toLowerCase()
+          .includes(search.toLowerCase()) ||
+        order.customer.last_name.toLowerCase().includes(search.toLowerCase()) ||
+        order.customer.email.toLowerCase().includes(search.toLowerCase()) ||
+        order.id.toLowerCase().includes(search.toLowerCase());
+      const matchesStatus =
+        statusFilter === "all" || order.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    }) || [];
 
   return (
     <div className="space-y-6">
