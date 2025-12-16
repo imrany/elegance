@@ -45,6 +45,11 @@ type DB interface {
 	UpdateProduct(product *models.Product) error
 	DeleteProduct(id string) error
 
+	// website settings configuration
+	GetAllWebsiteSettings() ([]models.SiteSetting, error)
+	GetWebsiteSettingByKey(key string) (models.SiteSetting, error)
+	UpdateWebsiteSetting(key string, value string) error
+
 	// User management (admin)
 	GetAllUsers() ([]models.User, error)
 	UpdateUserRole(id, role string) error

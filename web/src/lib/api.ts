@@ -7,6 +7,39 @@ interface ApiError {
   status: number;
 }
 
+export type WebsiteSettingKeys = {
+  HERO: "hero";
+  ABOUT: "about";
+  CONTACT: "contact";
+  FEATURES: "features";
+  THEME: "theme";
+  SEO: "seo";
+  SMTP: "smtp";
+  STORE: "store";
+  SOCIAL: "social";
+};
+
+export type WebsiteSettingKey =
+  | WebsiteSettingKeys[
+      | "HERO"
+      | "STORE"
+      | "SOCIAL"
+      | "ABOUT"
+      | "CONTACT"
+      | "FEATURES"
+      | "SEO"
+      | "SMTP"
+      | "THEME"]
+  | string;
+
+export interface WebsiteConfig {
+  id: string;
+  key: WebsiteSettingKey;
+  value: SiteSettingValue;
+  createdAt: string; // Assuming ISO 8601 string for time.Time
+  updatedAt: string; // Assuming ISO 8601 string for time.Time
+}
+
 export interface User {
   id: string;
   email: string;
@@ -438,6 +471,31 @@ class ApiClient {
     return this.request<{ data: string }>(`/api/admin/users/${userId}`, {
       method: "DELETE",
     });
+  }
+
+  // Website Builder
+  async getAllWebsiteConfig() {
+    const url = `/api/admin/website-builder`;
+    return this.request<{ data: WebsiteConfig[] }>(url, {
+      method: "GET",
+    });
+  }
+
+  async getWebsiteConfig(key: string) {
+    const url = `/api/admin/website-builder/${key}`;
+    return this.request<{ data: WebsiteConfig }>(url, {
+      method: "GET",
+    });
+  }
+
+  async updateWebsiteConfig(key: string, value: string) {
+    return await this.request<{ data: WebsiteConfig }>(
+      `/api/admin/website-builder/${key}`,
+      {
+        method: "PUT",
+        body: JSON.stringify({ value }),
+      },
+    );
   }
 
   // setup

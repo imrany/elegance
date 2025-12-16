@@ -162,6 +162,11 @@ func (s *Server) setupRoutes() {
 			admin.PUT("/users/password", adminHandler.UpdateUserPassword)
 			admin.PUT("/users", adminHandler.UpdateUser)
 
+			// website-builder
+			admin.GET("/website-builder", adminHandler.GetAllWebsiteConfig)
+			admin.GET("/website-builder/:key", adminHandler.GetWebsiteConfig)
+			admin.PUT("/website-builder/:key", adminHandler.UpdateWebsiteSetting)
+
 			// Images management
 			admin.POST("/upload/image", adminHandler.UploadImage)
 			admin.DELETE("/images/:filename", adminHandler.DeleteImage)

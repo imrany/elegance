@@ -28,6 +28,8 @@ import { useEffect, useState } from "react";
 import { api } from "./lib/api";
 import UsersPage from "./pages/admin/UsersPage";
 import AccountPage from "./pages/AccountPage";
+import WebsiteBuilder from "./pages/admin/website-builder/WebsiteBuilder";
+import HomePage from "./pages/admin/website-builder/HomePage";
 
 const queryClient = new QueryClient();
 
@@ -92,6 +94,7 @@ const App = () => {
 
                       {/* Public Routes */}
                       <Route path="/" element={<Index />} />
+                      <Route path="/preview" element={<HomePage />} />
                       <Route
                         path="/category/:slug"
                         element={<CategoryPage />}
@@ -155,7 +158,10 @@ const App = () => {
                         <Route index element={<DashboardPage />} />
                         <Route path="products" element={<ProductsPage />} />
                         <Route path="orders" element={<OrdersAdminPage />} />
-                        {/*<Route path="users" element={<UsersManagement />} />*/}
+                        <Route
+                          path="website-builder"
+                          element={<WebsiteBuilder />}
+                        />
                         <Route path="users" element={<UsersPage />} />
                         <Route path="account" element={<AccountSettings />} />
                         <Route path="settings" element={<SettingsPage />} />

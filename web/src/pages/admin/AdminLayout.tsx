@@ -9,6 +9,7 @@ import {
   X,
   User,
   UsersRound,
+  ToolCase,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,6 +24,7 @@ const navItems = [
   { name: "Orders", href: "/admin/orders", icon: ShoppingCart },
   { name: "Users", href: "/admin/users", icon: UsersRound },
   { name: "Settings", href: "/admin/settings", icon: Settings },
+  { name: "Website Builder", href: "/admin/website-builder", icon: ToolCase },
 ];
 
 export default function AdminLayout() {

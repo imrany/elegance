@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -651,4 +652,133 @@ func (h *AdminHandler) DeleteCategory(c *gin.Context) {
 	utils.SuccessResponse(c, http.StatusOK, gin.H{
 		"message": "Category deleted successfully",
 	})
+}
+
+func (h *AdminHandler) GetAllWebsiteConfig(c *gin.Context) {
+	settings, err := h.db.GetAllWebsiteSettings()
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to get website settings", err)
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, settings)
+}
+
+func (h *AdminHandler) GetWebsiteConfig(c *gin.Context) {
+	key := c.Param("key")
+	settings, err := h.db.GetWebsiteSettingByKey(key)
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to get website settings", err)
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, settings)
+}
+
+func (h *AdminHandler) UpdateWebsiteSetting(c *gin.Context) {
+	key := c.Param("key")
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "User not authenticated", nil)
+		return
+	}
+
+	userIDStr := fmt.Sprintf("%v", userID)
+
+	var req struct {
+		Value string `json:"value" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Println("Failed to bind JSON:", err)
+		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	log.Println("UpdateWebsiteSetting:", key, req.Value)
+
+	// --- Centralized Image Cleanup Logic (Helper Function needed in your codebase) ---
+	// Define a helper function structure to clean up the logic
+	cleanupImage := func(currentValue string, newValue string, jsonField string) {
+		var current map[string]any
+		var new map[string]any
+
+		if err := json.Unmarshal([]byte(currentValue), &current); err != nil {
+			log.Printf("Failed to unmarshal existing JSON for cleanup (%s): %v", key, err)
+			return
+		}
+		if err := json.Unmarshal([]byte(newValue), &new); err != nil {
+			log.Printf("Failed to unmarshal new JSON for cleanup (%s): %v", key, err)
+			return
+		}
+
+		// We must type assert the values now that they are interfaces
+		oldImagePath, oldOk := current[jsonField].(string)
+		newImagePath, newOk := new[jsonField].(string)
+
+		if oldOk && newOk && oldImagePath != "" && oldImagePath != newImagePath {
+			parsedFilename := filepath.Base(oldImagePath)
+			if err := DeleteFile(userIDStr, parsedFilename); err != nil {
+				log.Printf("Failed to delete old image file (%s): %v", jsonField, err)
+			}
+		}
+	}
+	// --- End Helper Function ---
+
+	// Check if the current setting has an image we need to potentially delete
+	// We only need to fetch the existing setting once, before we update it in the database.
+	setting, err := h.db.GetWebsiteSettingByKey(key)
+	if err == nil && setting.Value != "" {
+		currentValue := strings.TrimSpace(setting.Value)
+
+		switch key {
+		case "store":
+			cleanupImage(currentValue, req.Value, "logo")
+		case "hero":
+			cleanupImage(currentValue, req.Value, "background_image")
+		case "about":
+			cleanupImage(currentValue, req.Value, "image")
+		case "seo":
+			// SEO handles multiple images, needs slight modification to the generic helper
+			var oldSEO struct {
+				OgImage string `json:"og_image"`
+				Favicon string `json:"favicon"`
+			}
+			var newSEO struct {
+				OgImage string `json:"og_image"`
+				Favicon string `json:"favicon"`
+			}
+
+			if json.Unmarshal([]byte(currentValue), &oldSEO) == nil && json.Unmarshal([]byte(req.Value), &newSEO) == nil {
+				// Check and delete OgImage
+				if oldSEO.OgImage != "" && oldSEO.OgImage != newSEO.OgImage {
+					if err := DeleteFile(userIDStr, filepath.Base(oldSEO.OgImage)); err != nil {
+						log.Printf("Failed to delete old og_image file: %v", err)
+					}
+				}
+				// Check and delete Favicon
+				if oldSEO.Favicon != "" && oldSEO.Favicon != newSEO.Favicon {
+					if err := DeleteFile(userIDStr, filepath.Base(oldSEO.Favicon)); err != nil {
+						log.Printf("Failed to delete old favicon file: %v", err)
+					}
+				}
+			}
+		}
+	} else if err != nil && err != sql.ErrNoRows { // Check if the error was something other than 'not found'
+		log.Printf("Error fetching existing setting for key %s: %v", key, err)
+	}
+
+	// Update the database with the new value
+	if err := h.db.UpdateWebsiteSetting(key, req.Value); err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to update setting", err)
+		return
+	}
+
+	// Fetch the updated setting
+	config, err := h.db.GetWebsiteSettingByKey(key)
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch updated setting", err)
+		return
+	}
+	utils.SuccessResponse(c, http.StatusOK, config)
 }
