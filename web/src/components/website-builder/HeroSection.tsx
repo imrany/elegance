@@ -87,7 +87,7 @@ export function HeroSection({ data, onChange }: HeroSectionProps) {
   };
 
   return (
-    <Card>
+    <Card className="w-full overflow-hidden">
       <CardHeader>
         <CardTitle>Hero Section</CardTitle>
         <CardDescription>
@@ -95,7 +95,7 @@ export function HeroSection({ data, onChange }: HeroSectionProps) {
           call-to-action
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-6 p-4 sm:p-6">
         {/* Title */}
         <div className="space-y-2">
           <Label htmlFor="hero-title">Hero Title</Label>
@@ -144,69 +144,73 @@ export function HeroSection({ data, onChange }: HeroSectionProps) {
         {/* Background Image */}
         <div className="space-y-3">
           <Label>Background Image</Label>
-          {data.background_image ? (
-            <div className="relative aspect-video w-full h-[350px] overflow-hidden rounded-lg border border-border bg-secondary">
-              {uploadingImage ? (
-                <div className="flex h-full w-full items-center justify-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
-              ) : (
+          <div className="relative w-full overflow-hidden rounded-lg border border-border bg-secondary">
+            {/*
+                       Replaced fixed h-[350px] with aspect-video (16:9).
+                       On very small screens, this maintains proportion without overflow.
+                    */}
+            <div className="relative aspect-video w-full min-h-[200px] max-h-[400px]">
+              {data.background_image && !uploadingImage ? (
                 <>
                   <img
                     src={data.background_image}
                     alt="Hero background"
                     className="h-full w-full object-cover"
                   />
-                  <button
+                  <Button
                     type="button"
+                    variant="destructive"
+                    size="icon"
                     onClick={handleRemoveImage}
-                    className="absolute right-2 top-2 rounded-full bg-destructive p-2 text-destructive-foreground shadow-sm transition-opacity hover:opacity-80"
+                    className="absolute right-2 top-2 h-8 w-8 rounded-full shadow-md"
                   >
                     <X className="h-4 w-4" />
-                  </button>
+                  </Button>
                 </>
+              ) : (
+                <div className="flex h-full w-full flex-col items-center justify-center p-4">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    disabled={uploadingImage}
+                    className="hidden"
+                    id="hero-bg-upload"
+                  />
+                  <label
+                    htmlFor="hero-bg-upload"
+                    className="flex h-full w-full cursor-pointer flex-col items-center justify-center text-center"
+                  >
+                    {uploadingImage ? (
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    ) : (
+                      <>
+                        <ImageIcon className="mb-2 h-10 w-10 text-muted-foreground" />
+                        <span className="text-sm font-medium">
+                          Upload Image
+                        </span>
+                        <span className="hidden text-xs text-muted-foreground sm:block">
+                          1920x1080px recommended
+                        </span>
+                      </>
+                    )}
+                  </label>
+                </div>
               )}
             </div>
-          ) : (
-            <div className="relative aspect-video w-full">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                disabled={uploadingImage}
-                className="hidden"
-                id="hero-bg-upload"
-              />
-              <label
-                htmlFor="hero-bg-upload"
-                className="flex h-full w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-secondary/50 transition-colors hover:bg-secondary"
-              >
-                {uploadingImage ? (
-                  <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                ) : (
-                  <>
-                    <ImageIcon className="h-12 w-12 text-muted-foreground" />
-                    <span className="mt-2 text-sm font-medium text-foreground">
-                      Upload Background Image
-                    </span>
-                    <span className="mt-1 text-xs text-muted-foreground">
-                      Recommended: 1920x1080px, Max 5MB
-                    </span>
-                  </>
-                )}
-              </label>
-            </div>
-          )}
+          </div>
         </div>
 
         {/* Overlay Settings */}
-        <div className="space-y-4 rounded-lg border border-border p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label htmlFor="overlay-toggle">Dark Overlay</Label>
+        <div className="space-y-4 rounded-lg border border-border p-3 sm:p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex-1">
+              <Label htmlFor="overlay-toggle" className="text-sm font-semibold">
+                Dark Overlay
+              </Label>
               <p className="text-xs text-muted-foreground">
-                Add a dark overlay to improve text readability
+                Improves text readability on bright images
               </p>
             </div>
             <Switch
@@ -217,22 +221,21 @@ export function HeroSection({ data, onChange }: HeroSectionProps) {
           </div>
 
           {data.overlay && (
-            <div className="space-y-2">
+            <div className="space-y-4 pt-2">
               <div className="flex items-center justify-between">
-                <Label>Overlay Opacity</Label>
-                <span className="text-sm text-muted-foreground">
+                <Label className="text-xs">Opacity</Label>
+                <span className="text-xs font-mono font-medium">
                   {Math.round(data.overlay_opacity * 100)}%
                 </span>
               </div>
               <Slider
                 value={[data.overlay_opacity * 100]}
-                onValueChange={(value) =>
-                  onChange({ overlay_opacity: value[0] / 100 })
-                }
-                min={0}
                 max={100}
-                step={5}
-                className="w-full"
+                step={1}
+                onValueChange={(val) =>
+                  onChange({ overlay_opacity: val[0] / 100 })
+                }
+                className="py-2"
               />
             </div>
           )}
