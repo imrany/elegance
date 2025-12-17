@@ -181,19 +181,17 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue="store" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="store">
-            <Store className="mr-2 h-4 w-4" />
-            <span className="hidden md:inline">Store</span>
-          </TabsTrigger>
-          <TabsTrigger value="whatsapp">
-            <MessageCircle className="mr-2 h-4 w-4" />
-            <span className="hidden md:inline">WhatsApp</span>
-          </TabsTrigger>
-          <TabsTrigger value="smtp">
-            <MailQuestionMarkIcon className="mr-2 h-4 w-4" />
-            <span className="hidden md:inline">SMTP</span>
-          </TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3">
+          {[
+            { value: "store", icon: Store, label: "Store" },
+            { value: "whatsapp", icon: MessageCircle, label: "WhatsApp" },
+            { value: "smtp", icon: MailQuestionMarkIcon, label: "SMTP" },
+          ].map((tab) => (
+            <TabsTrigger key={tab.value} value={tab.value}>
+              <tab.icon className="mr-2 h-4 w-4" />
+              <span className="hidden md:inline">{tab.label}</span>
+            </TabsTrigger>
+          ))}
         </TabsList>
 
         {/* Store Settings */}

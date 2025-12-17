@@ -154,7 +154,15 @@ export function SEOSettings({ data, onChange }: SEOSettingsProps) {
                   <button
                     onClick={() => {
                       onChange({ og_image: "" });
-                      if (ogImageRef.current) ogImageRef.current.value = "";
+                      if (ogImageRef.current) {
+                        const filename = data.og_image.split("/").pop();
+                        if (filename) {
+                          api.deleteImage(filename).catch((error) => {
+                            console.error("Error deleting image:", error);
+                          });
+                        }
+                        ogImageRef.current.value = "";
+                      }
                     }}
                     className="absolute right-2 top-2 rounded-full bg-destructive p-2"
                   >
@@ -199,7 +207,15 @@ export function SEOSettings({ data, onChange }: SEOSettingsProps) {
               <button
                 onClick={() => {
                   onChange({ favicon: "" });
-                  if (faviconRef.current) faviconRef.current.value = "";
+                  if (faviconRef.current) {
+                    const filename = data.favicon.split("/").pop();
+                    if (filename) {
+                      api.deleteImage(filename).catch((error) => {
+                        console.error("Error deleting image:", error);
+                      });
+                    }
+                    faviconRef.current.value = "";
+                  }
                 }}
                 className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100"
               >

@@ -215,35 +215,26 @@ export default function WebsiteBuilder() {
         value={activeTab}
         onValueChange={(value) => setActiveTab(value as WebsiteSettingKey)}
       >
-        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-7">
-          <TabsTrigger value="hero" className="gap-2">
-            <Layout className="h-4 w-4" />
-            <span className="hidden md:inline">Hero</span>
-          </TabsTrigger>
-          <TabsTrigger value="about" className="gap-2">
-            <ImageIcon className="h-4 w-4" />
-            <span className="hidden md:inline">About</span>
-          </TabsTrigger>
-          <TabsTrigger value="features" className="gap-2">
-            <ToolCase className="h-4 w-4" />
-            <span className="hidden md:inline">Features</span>
-          </TabsTrigger>
-          <TabsTrigger value="contact" className="gap-2">
-            <Phone className="h-4 w-4" />
-            <span className="hidden md:inline">Contact</span>
-          </TabsTrigger>
-          <TabsTrigger value="theme" className="gap-2">
-            <Palette className="h-4 w-4" />
-            <span className="hidden md:inline">Theme</span>
-          </TabsTrigger>
-          <TabsTrigger value="seo" className="gap-2">
-            <Settings className="h-4 w-4" />
-            <span className="hidden md:inline">SEO</span>
-          </TabsTrigger>
-          <TabsTrigger value="social" className="gap-2">
-            <Link2 className="h-4 w-4" />
-            <span className="hidden md:inline">Social</span>
-          </TabsTrigger>
+        {/* The container: fits width, scrolls horizontally, hides scrollbar */}
+        <TabsList className="h-auto max-w-full items-center justify-start border-b bg-transparent p-0 scrollbar-hide grid grid-cols-3 md:grid-cols-7 md:bg-muted md:p-1">
+          {[
+            { value: "hero", icon: Layout, label: "Hero" },
+            { value: "about", icon: ImageIcon, label: "About" },
+            { value: "features", icon: ToolCase, label: "Features" },
+            { value: "contact", icon: Phone, label: "Contact" },
+            { value: "theme", icon: Palette, label: "Theme" },
+            { value: "seo", icon: Settings, label: "SEO" },
+            { value: "social", icon: Link2, label: "Social" },
+          ].map((tab) => (
+            <TabsTrigger
+              key={tab.value}
+              value={tab.value}
+              className="flex min-w-[100px] flex-shrink-0 items-center gap-2 rounded-none border-b-2 border-transparent px-4 py-3 text-sm data-[state=active]:border-primary data-[state=active]:bg-transparent md:min-w-0 md:flex-1 md:rounded-sm md:border-0 md:px-2 md:py-1.5 md:data-[state=active]:bg-background"
+            >
+              <tab.icon className="h-4 w-4" />
+              <span className="inline md:hidden lg:inline">{tab.label}</span>
+            </TabsTrigger>
+          ))}
         </TabsList>
 
         {isQueryLoading && !saveMutation.isPending ? (

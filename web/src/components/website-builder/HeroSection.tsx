@@ -76,6 +76,12 @@ export function HeroSection({ data, onChange }: HeroSectionProps) {
   const handleRemoveImage = () => {
     onChange({ background_image: "" });
     if (fileInputRef.current) {
+      const filename = data.background_image.split("/").pop();
+      if (filename) {
+        api.deleteImage(filename).catch((error) => {
+          console.error("Error deleting image:", error);
+        });
+      }
       fileInputRef.current.value = "";
     }
   };
@@ -95,7 +101,7 @@ export function HeroSection({ data, onChange }: HeroSectionProps) {
           <Label htmlFor="hero-title">Hero Title</Label>
           <Input
             id="hero-title"
-            value={data.title}
+            value={data.title ?? ""}
             onChange={(e) => onChange({ title: e.target.value })}
             placeholder="Welcome to Our Store"
           />
@@ -106,7 +112,7 @@ export function HeroSection({ data, onChange }: HeroSectionProps) {
           <Label htmlFor="hero-subtitle">Hero Subtitle</Label>
           <Textarea
             id="hero-subtitle"
-            value={data.subtitle}
+            value={data.subtitle ?? ""}
             onChange={(e) => onChange({ subtitle: e.target.value })}
             placeholder="Discover amazing products at great prices"
             rows={3}
@@ -119,7 +125,7 @@ export function HeroSection({ data, onChange }: HeroSectionProps) {
             <Label htmlFor="cta-text">Button Text</Label>
             <Input
               id="cta-text"
-              value={data.cta_text}
+              value={data.cta_text ?? ""}
               onChange={(e) => onChange({ cta_text: e.target.value })}
               placeholder="Shop Now"
             />
@@ -128,7 +134,7 @@ export function HeroSection({ data, onChange }: HeroSectionProps) {
             <Label htmlFor="cta-link">Button Link</Label>
             <Input
               id="cta-link"
-              value={data.cta_link}
+              value={data.cta_link ?? ""}
               onChange={(e) => onChange({ cta_link: e.target.value })}
               placeholder="/products"
             />

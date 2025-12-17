@@ -5,6 +5,7 @@ import {
   SectionData as CombinedWebsiteConfig,
   Category,
   WebsiteSettingKey,
+  API_URL,
 } from "@/lib/api";
 import { DEFAULT_CONFIG } from "@/lib/utils";
 import {
@@ -23,7 +24,6 @@ import {
 } from "react";
 import { toast } from "sonner";
 
-// Define the precise shape of the mutation input
 interface SaveConfigVars {
   key: WebsiteSettingKey;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -40,8 +40,8 @@ interface GeneralContextType {
 const GeneralContext = createContext<GeneralContextType | undefined>(undefined);
 
 export function GeneralProvider({ children }: { children: ReactNode }) {
-  const { data: categories = [] } = useCategories();
   const queryClient = useQueryClient();
+  const { data: categories = [] } = useCategories();
 
   const { data: configArray, isLoading } = useQuery<WebsiteConfig[]>({
     queryKey: ["website-config"],
@@ -57,25 +57,43 @@ export function GeneralProvider({ children }: { children: ReactNode }) {
       const response = await api.updateWebsiteConfig(key, value);
       return response.data;
     },
-    // Use the variables argument in onSuccess to ensure you invalidate the correct key
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: ["website-config"],
+    // Optimistic UI Update: Updates the cache immediately before the server responds
+    onMutate: async (newConfig) => {
+      await queryClient.cancelQueries({ queryKey: ["website-config"] });
+      const previousConfig = queryClient.getQueryData<WebsiteConfig[]>([
+        "website-config",
+      ]);
+
+      queryClient.setQueryData<WebsiteConfig[]>(["website-config"], (old) => {
+        if (!old) return old;
+        return old.map((item) =>
+          item.key === newConfig.key
+            ? { ...item, value: JSON.stringify(newConfig.sectionData) }
+            : item,
+        );
       });
+      return { previousConfig };
+    },
+    onError: (error: Error, variables, context) => {
+      // Rollback on error
+      if (context?.previousConfig) {
+        queryClient.setQueryData(["website-config"], context.previousConfig);
+      }
+      toast.error(error.message || "Failed to update website");
+    },
+    onSuccess: (_, variables) => {
       const sectionName =
         variables.key.charAt(0).toUpperCase() + variables.key.slice(1);
       toast.success(`${sectionName} section updated successfully`);
     },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to update website");
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["website-config"] });
     },
   });
 
   const websiteConfig = useMemo(() => {
-    if (!configArray) return DEFAULT_CONFIG as CombinedWebsiteConfig;
-
     const combinedConfig: Partial<CombinedWebsiteConfig> = {};
-    configArray.forEach((item) => {
+    configArray?.forEach((item) => {
       try {
         combinedConfig[item.key as keyof CombinedWebsiteConfig] =
           typeof item.value === "string" ? JSON.parse(item.value) : item.value;
@@ -83,57 +101,76 @@ export function GeneralProvider({ children }: { children: ReactNode }) {
         console.error(`Error parsing config key ${item.key}:`, e);
       }
     });
-
     return { ...DEFAULT_CONFIG, ...combinedConfig } as CombinedWebsiteConfig;
   }, [configArray]);
 
-  // Theme & SEO effects (logic remains same but using optional chaining)
+  // Theme Management
   useEffect(() => {
     const theme = websiteConfig?.theme;
     if (!theme) return;
 
     const root = document.documentElement;
-    if (theme.primary_color)
-      root.style.setProperty("--theme-primary", theme.primary_color);
-    if (theme.secondary_color)
-      root.style.setProperty("--theme-secondary", theme.secondary_color);
-    if (theme.accent_color)
-      root.style.setProperty("--theme-accent", theme.accent_color);
-    if (theme.border_radius)
-      root.style.setProperty("--theme-radius", theme.border_radius);
+    const styles = {
+      "--theme-primary": theme.primary_color,
+      "--theme-secondary": theme.secondary_color,
+      "--theme-accent": theme.accent_color,
+      "--theme-radius": theme.border_radius,
+      "--font-main": ["Inter", "Poppins", "Montserrat"].includes(
+        theme.font_family,
+      )
+        ? `"${theme.font_family}", sans-serif`
+        : `"${theme.font_family}", serif`,
+    };
 
-    const fontStack = ["Inter", "Poppins", "Montserrat"].includes(
-      theme.font_family,
-    )
-      ? `"${theme.font_family}", sans-serif`
-      : `"${theme.font_family}", serif`;
-    root.style.setProperty("--font-main", fontStack);
+    Object.entries(styles).forEach(([key, val]) => {
+      if (val) root.style.setProperty(key, val);
+    });
   }, [websiteConfig?.theme]);
 
-  // Handle SEO
+  // SEO Management
   useEffect(() => {
     const seo = websiteConfig?.seo;
     if (!seo) return;
 
     document.title = seo.title || "My Store";
-    const updateMeta = (name: string, content: string, isProperty = false) => {
-      const selector = isProperty
-        ? `meta[property="${name}"]`
-        : `meta[name="${name}"]`;
-      let el = document.querySelector(selector);
+
+    // Update/Create Meta Tags
+    const updateMeta = (attr: string, key: string, content: string) => {
+      if (!content) return;
+      let el = document.querySelector(`meta[${attr}="${key}"]`);
       if (!el) {
         el = document.createElement("meta");
-        el.setAttribute(isProperty ? "property" : "name", name);
+        el.setAttribute(attr, key);
         document.head.appendChild(el);
       }
-      el.setAttribute("content", content || "");
+      el.setAttribute("content", content);
     };
 
-    updateMeta("description", seo.description);
-    updateMeta("keywords", seo.keywords);
-    updateMeta("og:title", seo.title, true);
-    updateMeta("og:description", seo.description, true);
-    updateMeta("og:image", seo.og_image, true);
+    updateMeta("name", "description", seo.description);
+    updateMeta("name", "keywords", seo.keywords);
+    updateMeta("property", "og:title", seo.title);
+    updateMeta("property", "og:description", seo.description);
+    updateMeta("property", "og:image", seo.og_image);
+
+    // Update Favicon (Crucial)
+    if (seo.favicon) {
+      // Select any existing icon link (rel="icon" or rel="shortcut icon")
+      let favicon = document.querySelector("link[rel~='icon']");
+
+      if (!favicon) {
+        favicon = document.createElement("link");
+        favicon.setAttribute("rel", "icon");
+        document.head.appendChild(favicon);
+      }
+
+      // Prefix with API_URL if it's a relative path from your DB
+      favicon.setAttribute(
+        "href",
+        seo.favicon.startsWith("http")
+          ? seo.favicon
+          : `${API_URL}${seo.favicon}`,
+      );
+    }
   }, [websiteConfig?.seo]);
 
   if (isLoading) {
@@ -146,20 +183,16 @@ export function GeneralProvider({ children }: { children: ReactNode }) {
 
   return (
     <GeneralContext.Provider
-      value={{
-        websiteConfig,
-        categories,
-        saveWebsiteConfig,
-      }}
+      value={{ websiteConfig, categories, saveWebsiteConfig }}
     >
       {children}
     </GeneralContext.Provider>
   );
 }
 
-export function useGeneralContext() {
+export const useGeneralContext = () => {
   const context = useContext(GeneralContext);
   if (!context)
     throw new Error("useGeneralContext must be used within GeneralProvider");
   return context;
-}
+};
