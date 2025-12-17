@@ -17,5 +17,6 @@ INSERT INTO website_settings_config (key, value) VALUES
 ('seo', '{ "title": "My Store - Quality Products", "description": "Shop the best products at amazing prices", "keywords": "store, shop, products, ecommerce", "og_image": "", "favicon": "" }'),
 ('social', '{ "facebook": "", "twitter": "", "instagram": "", "linkedin": "", "youtube": "", "tiktok": "" }'),
 ('store', '{"name": "ÉLÉGANCE", "currency": "KES", "free_delivery_threshold": 10000, "logo": "/logo.png", "announcement": "Free Delivery on Orders Over KES 10,000 | Luxury Fashion, Made in Kenya", "description": "Discover the finest luxury fashion in Kenya, crafted with passion and precision."}'),
-('smtp', '{"enabled": false, "from_email": "", "resend_api_key": ""}')
+('smtp', '{"enabled": false, "from_email": "", "resend_api_key": ""}'),
+('whatsapp', '{"phone": "+254700000000", "message": "Hello! I am interested in your products."}')
 ON CONFLICT (key) DO NOTHING;

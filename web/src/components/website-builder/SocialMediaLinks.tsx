@@ -79,7 +79,7 @@ export function SocialMediaLinks({ data, onChange }: SocialMediaLinksProps) {
                 value={getUsername(data[name] ?? "", name)}
                 // SEND: Send the full URL to the parent
                 onChange={(e) => {
-                  const username = e.target.value;
+                  const username = getUsername(e.target.value, name);
                   const fullUrl = username
                     ? `https://${name}.com/${username}`
                     : "";

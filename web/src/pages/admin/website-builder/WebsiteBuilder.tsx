@@ -130,7 +130,7 @@ export default function WebsiteBuilder() {
   };
 
   const handlePreview = () => {
-    window.open("/preview", "_blank");
+    window.open("/", "_blank");
   };
 
   // Reset hasChanges when switching tabs

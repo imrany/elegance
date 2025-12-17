@@ -191,4 +191,8 @@ export const DEFAULT_CONFIG: SectionData = {
     from_email: "",
     resend_api_key: "",
   },
+  whatsapp: {
+    phone: "",
+    message: "",
+  },
 };

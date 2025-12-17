@@ -34,33 +34,20 @@ export function Header() {
   const { orderStatusCount } = useOrder();
   const { user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
-  const { categories } = useGeneralContext();
+  const { categories, websiteConfig } = useGeneralContext();
+  const store = websiteConfig?.store;
   const navLinks =
     categories?.map((category) => ({
       name: category.name,
       href: `/category/${category.slug}`,
     })) || null;
-  const { data: setting, isLoading } = useSiteSetting("store");
-  const value = (() => {
-    if (typeof setting?.value === "string" && setting) {
-      try {
-        return JSON.parse(setting?.value);
-      } catch (e) {
-        console.error("Error parsing store settings value:", e);
-        return null;
-      }
-    }
-    return null;
-  })();
-  const siteAnnouncement = value?.["announcement"];
-  const siteName = value?.["name"] || "[Your Store Name]";
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       {/* Top bar */}
       <div className="bg-primary text-primary-foreground">
-        {siteAnnouncement && (
+        {store.announcement && (
           <div className="container flex h-8 items-center justify-center text-xs tracking-elegant">
-            {siteAnnouncement}
+            {store.announcement}
           </div>
         )}
       </div>
@@ -113,11 +100,9 @@ export function Header() {
 
         {/* Logo */}
         <Link to="/" className="flex items-center">
-          {!isLoading && (
-            <h1 className="font-serif text-2xl font-semibold tracking-elegant text-foreground md:text-3xl">
-              {siteName}
-            </h1>
-          )}
+          <h1 className="font-serif text-2xl font-semibold tracking-elegant text-foreground md:text-3xl">
+            {store?.name || "[Your Store Name]"}
+          </h1>
         </Link>
 
         {/* Desktop navigation */}

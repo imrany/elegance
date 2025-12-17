@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, API_URL, SiteSetting } from "@/lib/api";
+import { api, API_URL, SiteSetting, WebsiteSettingKey } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,6 +26,7 @@ import {
   X,
   MailQuestionMarkIcon,
 } from "lucide-react";
+import { useGeneralContext } from "@/contexts/GeneralContext";
 
 export default function SettingsPage() {
   const queryClient = useQueryClient();
@@ -35,103 +36,23 @@ export default function SettingsPage() {
   const [emailFromEmail, setEmailFromEmail] = useState("");
   const [emailApiKey, setEmailApiKey] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { websiteConfig, saveWebsiteConfig: $saveWebsiteConfig } =
+    useGeneralContext();
+  const store = websiteConfig?.store;
+  const smtp = websiteConfig?.smtp;
+  const whatsapp = websiteConfig?.whatsapp;
 
-  // Helper function to parse setting values
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const parseSettingValue = (setting: SiteSetting | undefined): any => {
-    if (!setting?.value) return {};
-
-    if (typeof setting.value === "object") {
-      return setting.value;
-    }
-
-    if (typeof setting.value === "string") {
-      try {
-        return JSON.parse(setting.value);
-      } catch (e) {
-        console.error("Error parsing setting value:", e);
-        return {};
-      }
-    }
-
-    return {};
+  const saveWebsiteConfig = (key: WebsiteSettingKey, value: any) => {
+    $saveWebsiteConfig.mutate({ key: key, sectionData: value });
   };
-
-  // Fetch all settings
-  const {
-    data: storeSettings,
-    isLoading: storeLoading,
-    error: storeError,
-  } = useQuery({
-    queryKey: ["settings", "store"],
-    queryFn: async () => {
-      const response = await api.getSetting("store");
-      return response.data;
-    },
-  });
-
-  const {
-    data: whatsappSettings,
-    isLoading: whatsappLoading,
-    error: whatsappError,
-  } = useQuery({
-    queryKey: ["settings", "whatsapp"],
-    queryFn: async () => {
-      const response = await api.getSetting("whatsapp");
-      return response.data;
-    },
-  });
-
-  const {
-    data: emailSettings,
-    isLoading: smtpLoading,
-    error: smtpError,
-  } = useQuery({
-    queryKey: ["settings", "email"],
-    queryFn: async () => {
-      const response = await api.getSetting("email");
-      return response.data;
-    },
-  });
-
-  const {
-    data: socialSettings,
-    isLoading: socialLoading,
-    error: socialError,
-  } = useQuery({
-    queryKey: ["settings", "social_media"],
-    queryFn: async () => {
-      const response = await api.getSetting("social_media");
-      return response.data;
-    },
-  });
-
-  // Parse setting values
-  const storeValue = parseSettingValue(storeSettings);
-  const whatsappValue = parseSettingValue(whatsappSettings);
-  const emailValue = parseSettingValue(emailSettings);
-  const socialValue = parseSettingValue(socialSettings);
 
   // Initialize email enabled state
   useEffect(() => {
-    setEmailEnabled(emailValue?.enabled || false);
-    setEmailFromEmail(emailValue?.from_email || "");
-    setEmailApiKey(emailValue?.resend_api_key || "");
-  }, [emailValue?.enabled, emailValue?.from_email, emailValue?.resend_api_key]);
-
-  // Update settings mutation
-  const updateSettingMutation = useMutation({
-    mutationFn: ({ key, value }: { key: string; value: string }) =>
-      api.updateSetting(key, value),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["settings", variables.key] });
-      toast.success("Settings updated successfully");
-    },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    onError: (error: any) => {
-      toast.error(error?.message || "Failed to update settings");
-    },
-  });
+    setEmailEnabled(smtp?.enabled || false);
+    setEmailFromEmail(smtp?.from_email || "");
+    setEmailApiKey(smtp?.resend_api_key || "");
+  }, [smtp?.enabled, smtp?.from_email, smtp?.resend_api_key]);
 
   // Upload image mutation
   const uploadImageMutation = useMutation({
@@ -145,16 +66,13 @@ export default function SettingsPage() {
     onSuccess: (path) => {
       setLogoPreview(path);
       //update store settings with new logo URL
-      updateSettingMutation.mutate({
-        key: "store",
-        value: JSON.stringify({
-          name: storeValue.name,
-          description: storeValue.description,
-          currency: storeValue.currency,
-          free_delivery_threshold: storeValue.free_delivery_threshold,
-          logo: path,
-          announcement: storeValue.announcement,
-        }),
+      saveWebsiteConfig("store", {
+        name: store.name,
+        description: store.description,
+        currency: store.currency,
+        free_delivery_threshold: store.free_delivery_threshold,
+        logo: path,
+        announcement: store.announcement,
       });
       toast.success("Logo uploaded successfully");
     },
@@ -172,18 +90,13 @@ export default function SettingsPage() {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
 
-    updateSettingMutation.mutate({
-      key: "store",
-      value: JSON.stringify({
-        name: formData.get("name") as string,
-        description: formData.get("description") as string,
-        currency: formData.get("currency") as string,
-        free_delivery_threshold: Number(
-          formData.get("free_delivery_threshold"),
-        ),
-        logo: logoPreview || storeValue?.logo || "",
-        announcement: formData.get("announcement") as string,
-      }),
+    saveWebsiteConfig("store", {
+      name: formData.get("name") as string,
+      description: formData.get("description") as string,
+      currency: formData.get("currency") as string,
+      free_delivery_threshold: Number(formData.get("free_delivery_threshold")),
+      logo: logoPreview || store?.logo || "",
+      announcement: formData.get("announcement") as string,
     });
   };
 
@@ -192,27 +105,9 @@ export default function SettingsPage() {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
 
-    updateSettingMutation.mutate({
-      key: "whatsapp",
-      value: JSON.stringify({
-        phone: formData.get("phone") as string,
-        message: formData.get("message") as string,
-      }),
-    });
-  };
-
-  // Handle social media update
-  const handleSocialUpdate = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-
-    updateSettingMutation.mutate({
-      key: "social_media",
-      value: JSON.stringify({
-        facebook: formData.get("facebook") as string,
-        instagram: formData.get("instagram") as string,
-        twitter: formData.get("twitter") as string,
-      }),
+    saveWebsiteConfig("whatsapp", {
+      phone: formData.get("phone") as string,
+      message: formData.get("message") as string,
     });
   };
 
@@ -228,13 +123,10 @@ export default function SettingsPage() {
       }
     }
 
-    updateSettingMutation.mutate({
-      key: "email",
-      value: JSON.stringify({
-        enabled: emailEnabled,
-        from_email: emailFromEmail,
-        resend_api_key: emailApiKey,
-      }),
+    saveWebsiteConfig("smtp", {
+      enabled: emailEnabled,
+      from_email: emailFromEmail,
+      resend_api_key: emailApiKey,
     });
   };
 
@@ -277,35 +169,6 @@ export default function SettingsPage() {
     return emailFromEmail.trim() !== "" && emailApiKey.trim() !== "";
   };
 
-  // Loading state
-  const isLoading =
-    storeLoading || whatsappLoading || smtpLoading || socialLoading;
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-accent" />
-      </div>
-    );
-  }
-
-  // Error state
-  const hasError = storeError || whatsappError || smtpError || socialError;
-  if (hasError) {
-    return (
-      <div className="space-y-4">
-        <h1 className="font-serif text-2xl font-light text-foreground md:text-3xl">
-          Settings
-        </h1>
-        <Alert variant="destructive">
-          <AlertDescription>
-            Failed to load settings. Please try refreshing the page.
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-8">
       <div>
@@ -322,10 +185,6 @@ export default function SettingsPage() {
           <TabsTrigger value="store">
             <Store className="mr-2 h-4 w-4" />
             <span className="hidden md:inline">Store</span>
-          </TabsTrigger>
-          <TabsTrigger value="social">
-            <Facebook className="mr-2 h-4 w-4" />
-            <span className="hidden md:inline">Social Media</span>
           </TabsTrigger>
           <TabsTrigger value="whatsapp">
             <MessageCircle className="mr-2 h-4 w-4" />
@@ -355,10 +214,10 @@ export default function SettingsPage() {
                     <div className="relative h-24 w-24 rounded border border-border bg-muted flex items-center justify-center overflow-hidden">
                       {isUploadingLogo ? (
                         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                      ) : logoPreview || storeValue?.logo ? (
+                      ) : logoPreview || store?.logo ? (
                         <>
                           <img
-                            src={API_URL + (logoPreview || storeValue?.logo)}
+                            src={API_URL + (logoPreview || store?.logo)}
                             alt="Store logo"
                             className="h-full w-full object-cover"
                           />
@@ -398,7 +257,7 @@ export default function SettingsPage() {
                   <Input
                     id="name"
                     name="name"
-                    defaultValue={storeValue?.name || ""}
+                    defaultValue={store?.name || ""}
                     placeholder="ÉLÉGANCE"
                     required
                   />
@@ -410,7 +269,7 @@ export default function SettingsPage() {
                   <Textarea
                     id="description"
                     name="description"
-                    defaultValue={storeValue?.description || ""}
+                    defaultValue={store?.description || ""}
                     placeholder="Tell customers about your store..."
                     maxLength={255}
                     rows={4}
@@ -423,7 +282,7 @@ export default function SettingsPage() {
                   <Input
                     id="currency"
                     name="currency"
-                    defaultValue={storeValue?.currency || "KES"}
+                    defaultValue={store?.currency || "KES"}
                     placeholder="KES"
                     required
                   />
@@ -438,7 +297,7 @@ export default function SettingsPage() {
                     id="free_delivery_threshold"
                     name="free_delivery_threshold"
                     type="number"
-                    defaultValue={storeValue?.free_delivery_threshold || 10000}
+                    defaultValue={store?.free_delivery_threshold || 10000}
                     min="0"
                     required
                   />
@@ -455,88 +314,14 @@ export default function SettingsPage() {
                     name="announcement"
                     rows={2}
                     maxLength={155}
-                    defaultValue={storeValue?.announcement || ""}
-                    placeholder={
-                      storeValue?.announcement || "Welcome to ÉLÉGANCE!"
-                    }
+                    defaultValue={store?.announcement || ""}
+                    placeholder={store?.announcement || "Welcome to ÉLÉGANCE!"}
                     required
                   />
                 </div>
 
-                <Button
-                  type="submit"
-                  disabled={updateSettingMutation.isPending}
-                >
-                  {updateSettingMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    "Save Changes"
-                  )}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Social Media Settings */}
-        <TabsContent value="social">
-          <Card>
-            <CardHeader>
-              <CardTitle>Social Media Links</CardTitle>
-              <CardDescription>Add your social media profiles</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSocialUpdate} className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="facebook">
-                    <Facebook className="inline mr-2 h-4 w-4" />
-                    Facebook
-                  </Label>
-                  <Input
-                    id="facebook"
-                    name="facebook"
-                    type="text"
-                    defaultValue={socialValue?.facebook || ""}
-                    placeholder="Your facebook username"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="instagram">
-                    <Instagram className="inline mr-2 h-4 w-4" />
-                    Instagram
-                  </Label>
-                  <Input
-                    id="instagram"
-                    name="instagram"
-                    type="text"
-                    defaultValue={socialValue?.instagram || ""}
-                    placeholder="Your instagram username"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="twitter">
-                    <Twitter className="inline mr-2 h-4 w-4" />
-                    Twitter / X
-                  </Label>
-                  <Input
-                    id="twitter"
-                    name="twitter"
-                    type="text"
-                    defaultValue={socialValue?.twitter || ""}
-                    placeholder="Your twitter username"
-                  />
-                </div>
-
-                <Button
-                  type="submit"
-                  disabled={updateSettingMutation.isPending}
-                >
-                  {updateSettingMutation.isPending ? (
+                <Button type="submit" disabled={$saveWebsiteConfig.isPending}>
+                  {$saveWebsiteConfig.isPending ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Saving...
@@ -567,7 +352,7 @@ export default function SettingsPage() {
                     id="phone"
                     name="phone"
                     type="tel"
-                    defaultValue={whatsappValue?.phone || ""}
+                    defaultValue={whatsapp?.phone || ""}
                     placeholder="+254700000000"
                     required
                   />
@@ -581,18 +366,15 @@ export default function SettingsPage() {
                   <Textarea
                     id="message"
                     name="message"
-                    defaultValue={whatsappValue?.message || ""}
+                    defaultValue={whatsapp?.message || ""}
                     placeholder="Hello! I am interested in your products."
                     rows={3}
                     required
                   />
                 </div>
 
-                <Button
-                  type="submit"
-                  disabled={updateSettingMutation.isPending}
-                >
-                  {updateSettingMutation.isPending ? (
+                <Button type="submit" disabled={$saveWebsiteConfig.isPending}>
+                  {$saveWebsiteConfig.isPending ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Saving...
@@ -670,11 +452,9 @@ export default function SettingsPage() {
 
                 <Button
                   type="submit"
-                  disabled={
-                    !isEmailFormValid() || updateSettingMutation.isPending
-                  }
+                  disabled={!isEmailFormValid() || $saveWebsiteConfig.isPending}
                 >
-                  {updateSettingMutation.isPending ? (
+                  {$saveWebsiteConfig.isPending ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Saving...

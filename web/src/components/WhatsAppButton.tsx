@@ -1,28 +1,18 @@
 import { MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useSiteSetting } from "@/hooks/useSiteSetting";
+import { useGeneralContext } from "@/contexts/GeneralContext";
 
 export function WhatsAppButton() {
-  const { data: setting, isLoading } = useSiteSetting("whatsapp");
-  const value = (() => {
-    if (typeof setting?.value === "string" && setting) {
-      try {
-        return JSON.parse(setting?.value);
-      } catch (e) {
-        console.error("Error parsing store settings value:", e);
-        return null;
-      }
-    }
-    return null;
-  })();
-  const phone = value?.["phone"];
+  const { websiteConfig } = useGeneralContext();
+  const whatsapp = websiteConfig?.whatsapp;
+  const phone = whatsapp?.["phone"];
   const message =
-    value?.["message"] || "Hello! I am interested in your products.";
+    whatsapp?.["message"] || "Hello! I am interested in your products.";
   const whatsappUrl = `https://wa.me/${phone?.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(message)}`;
 
   return (
     <>
-      {setting && phone && !isLoading && (
+      {whatsapp && phone && (
         <a
           href={whatsappUrl}
           target="_blank"

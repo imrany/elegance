@@ -84,6 +84,11 @@ export interface SmtpType {
   resend_api_key: string;
 }
 
+export interface WhatsappType {
+  phone: string;
+  message: string;
+}
+
 export interface SectionData {
   hero?: HeroType;
   about?: AboutType;
@@ -94,6 +99,7 @@ export interface SectionData {
   social?: SocialType;
   store: StoreType;
   smtp: SmtpType;
+  whatsapp: WhatsappType;
 }
 
 export type WebsiteSettingKey = keyof SectionData;

@@ -13,9 +13,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
-import { X, Loader2, ImageIcon } from "lucide-react";
+import { X, Loader2, ImageIcon, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
+import { useGeneralContext } from "@/contexts/GeneralContext";
 
 interface HeroSectionProps {
   data: HeroType;
@@ -24,6 +26,9 @@ interface HeroSectionProps {
 }
 
 export function HeroSection({ data, onChange }: HeroSectionProps) {
+  const currentYear = new Date().getFullYear();
+  const { categories, websiteConfig } = useGeneralContext();
+  const storeDetails = websiteConfig.store;
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -230,35 +235,86 @@ export function HeroSection({ data, onChange }: HeroSectionProps) {
         {/* Preview */}
         <div className="space-y-2">
           <Label>Preview</Label>
-          <div
-            className="relative overflow-hidden rounded-lg border border-border"
-            style={{ minHeight: "300px" }}
-          >
+          <div className="relative overflow-hidden rounded-lg border border-border min-h-[400px]">
+            {/* Background Image */}
             {data.background_image && (
               <img
                 src={data.background_image}
-                alt="Hero preview"
+                alt="Hero background"
                 className="absolute inset-0 h-full w-full object-cover"
               />
             )}
+
+            {/* Overlay */}
             {data.overlay && data.background_image && (
               <div
                 className="absolute inset-0 bg-black"
                 style={{ opacity: data.overlay_opacity }}
               />
             )}
-            <div className="relative flex h-full min-h-[300px] flex-col items-center justify-center p-8 text-center">
-              <h1 className="mb-4 text-3xl font-bold text-white drop-shadow-lg md:text-4xl">
-                {data.title || "Hero Title"}
-              </h1>
-              <p className="mb-6 max-w-2xl text-lg text-white/90 drop-shadow-md">
-                {data.subtitle || "Hero subtitle goes here"}
-              </p>
-              <Button size="lg" className="shadow-lg">
-                {data.cta_text || "Call to Action"}
-              </Button>
+
+            {/* Content */}
+            <div className="relative flex items-center justify-start min-h-[400px] p-8">
+              <div className="max-w-3xl w-full space-y-6">
+                {/* Badge */}
+                <p className="text-sm font-medium tracking-luxury uppercase text-accent">
+                  New Collection {currentYear}
+                </p>
+
+                {/* Title */}
+                <h1 className="font-serif text-5xl font-light leading-tight text-primary-foreground md:text-6xl lg:text-7xl">
+                  {data.title || storeDetails?.name || "Welcome to Our Store"}
+                  <br />
+                  <span className="font-semibold italic">
+                    {data.subtitle
+                      ? `${data.subtitle.slice(0, 9)}...`
+                      : "Redefined"}
+                  </span>
+                </h1>
+
+                {/* Description */}
+                <p className="text-lg leading-relaxed text-primary-foreground/80">
+                  {storeDetails?.description || "+ [Add Store Description]"}
+                </p>
+
+                {/* Buttons */}
+                <div className="flex flex-wrap gap-4">
+                  <Button
+                    asChild
+                    size="lg"
+                    className="group gap-2 bg-accent text-accent-foreground hover:bg-accent/90"
+                  >
+                    <Link
+                      to={data.cta_link || `/category/${categories[0].slug}`}
+                      className="capitalize"
+                    >
+                      {data.cta_text || `Shop ${categories[0].name}`}
+                      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                    </Link>
+                  </Button>
+                  {categories && categories.length > 1 && (
+                    <Button
+                      asChild
+                      size="lg"
+                      variant="outline"
+                      className="border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground hover:text-primary"
+                    >
+                      <Link
+                        to={`/category/${categories[1].slug}`}
+                        className="capitalize"
+                      >
+                        Shop {categories[1].name}
+                      </Link>
+                    </Button>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
+          <p className="text-xs text-muted-foreground">
+            This is a preview of how your hero section will appear on the
+            homepage
+          </p>
         </div>
       </CardContent>
     </Card>
