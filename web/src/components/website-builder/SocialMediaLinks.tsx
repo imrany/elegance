@@ -16,16 +16,10 @@ import {
   Globe,
   Link2,
 } from "lucide-react";
+import { SocialType } from "@/lib/api";
 
 interface SocialMediaLinksProps {
-  data: {
-    facebook: string;
-    twitter: string;
-    instagram: string;
-    linkedin: string;
-    youtube: string;
-    tiktok: string;
-  };
+  data: SocialType;
   onChange: (data: Partial<SocialMediaLinksProps["data"]>) => void;
 }
 

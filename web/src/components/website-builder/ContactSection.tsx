@@ -9,18 +9,11 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { ContactType } from "@/lib/api";
 
 // Contact Section Component
 interface ContactSectionProps {
-  data: {
-    title: string;
-    subtitle: string;
-    email: string;
-    phone: string;
-    address: string;
-    show_map: boolean;
-    map_url: string;
-  };
+  data: ContactType;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onChange: (data: any) => void;
 }

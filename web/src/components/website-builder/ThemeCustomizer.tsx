@@ -14,28 +14,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ThemeType } from "@/lib/api";
 
-// Theme Customizer Component
 interface ThemeCustomizerProps {
-  data: {
-    primary_color: string;
-    secondary_color: string;
-    accent_color: string;
-    font_family: string;
-    border_radius: string;
-  };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onChange: (data: any) => void;
+  data: ThemeType;
+  onChange: (data: Partial<ThemeType>) => void;
 }
 
 export function ThemeCustomizer({ data, onChange }: ThemeCustomizerProps) {
+  // Updated to match your @fontsource imports from earlier
   const fontOptions = [
-    { value: "Inter", label: "Inter (Default)" },
-    { value: "Roboto", label: "Roboto" },
-    { value: "Open Sans", label: "Open Sans" },
-    { value: "Lato", label: "Lato" },
-    { value: "Montserrat", label: "Montserrat" },
-    { value: "Poppins", label: "Poppins" },
+    { value: "Inter", label: "Inter (Sans)" },
+    { value: "Cormorant Garamond", label: "Cormorant Garamond (Serif)" },
+    { value: "Poppins", label: "Poppins (Modern Sans)" },
+    { value: "Playfair Display", label: "Playfair Display (Luxury Serif)" },
+    { value: "Montserrat", label: "Montserrat (Clean Sans)" },
+    { value: "Merriweather", label: "Merriweather (Classic Serif)" },
   ];
 
   const radiusOptions = [
@@ -56,18 +50,20 @@ export function ThemeCustomizer({ data, onChange }: ThemeCustomizerProps) {
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="grid gap-4 sm:grid-cols-3">
+          {/* Primary Color */}
           <div className="space-y-2">
             <Label htmlFor="primary-color">Primary Color</Label>
             <div className="flex gap-2">
               <Input
                 id="primary-color"
                 type="color"
-                value={data.primary_color}
+                // FIX: Fallback prevents controlled/uncontrolled error
+                value={data.primary_color ?? "#000000"}
                 onChange={(e) => onChange({ primary_color: e.target.value })}
                 className="h-10 w-20"
               />
               <Input
-                value={data.primary_color}
+                value={data.primary_color ?? "#000000"}
                 onChange={(e) => onChange({ primary_color: e.target.value })}
                 placeholder="#000000"
                 className="flex-1"
@@ -75,18 +71,19 @@ export function ThemeCustomizer({ data, onChange }: ThemeCustomizerProps) {
             </div>
           </div>
 
+          {/* Secondary Color */}
           <div className="space-y-2">
             <Label htmlFor="secondary-color">Secondary Color</Label>
             <div className="flex gap-2">
               <Input
                 id="secondary-color"
                 type="color"
-                value={data.secondary_color}
+                value={data.secondary_color ?? "#666666"}
                 onChange={(e) => onChange({ secondary_color: e.target.value })}
                 className="h-10 w-20"
               />
               <Input
-                value={data.secondary_color}
+                value={data.secondary_color ?? "#666666"}
                 onChange={(e) => onChange({ secondary_color: e.target.value })}
                 placeholder="#666666"
                 className="flex-1"
@@ -94,18 +91,19 @@ export function ThemeCustomizer({ data, onChange }: ThemeCustomizerProps) {
             </div>
           </div>
 
+          {/* Accent Color */}
           <div className="space-y-2">
             <Label htmlFor="accent-color">Accent Color</Label>
             <div className="flex gap-2">
               <Input
                 id="accent-color"
                 type="color"
-                value={data.accent_color}
+                value={data.accent_color ?? "#007bff"}
                 onChange={(e) => onChange({ accent_color: e.target.value })}
                 className="h-10 w-20"
               />
               <Input
-                value={data.accent_color}
+                value={data.accent_color ?? "#007bff"}
                 onChange={(e) => onChange({ accent_color: e.target.value })}
                 placeholder="#007bff"
                 className="flex-1"
@@ -115,10 +113,12 @@ export function ThemeCustomizer({ data, onChange }: ThemeCustomizerProps) {
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
+          {/* Font Family */}
           <div className="space-y-2">
             <Label htmlFor="font-family">Font Family</Label>
             <Select
-              value={data.font_family}
+              // FIX: Ensure value is never undefined for Select
+              value={data.font_family ?? "Inter"}
               onValueChange={(value) => onChange({ font_family: value })}
             >
               <SelectTrigger>
@@ -134,10 +134,11 @@ export function ThemeCustomizer({ data, onChange }: ThemeCustomizerProps) {
             </Select>
           </div>
 
+          {/* Border Radius */}
           <div className="space-y-2">
             <Label htmlFor="border-radius">Border Radius</Label>
             <Select
-              value={data.border_radius}
+              value={data.border_radius ?? "0.5rem"}
               onValueChange={(value) => onChange({ border_radius: value })}
             >
               <SelectTrigger>
@@ -161,7 +162,7 @@ export function ThemeCustomizer({ data, onChange }: ThemeCustomizerProps) {
             <div className="flex-1 space-y-2">
               <div
                 className="h-20 rounded"
-                style={{ backgroundColor: data.primary_color }}
+                style={{ backgroundColor: data.primary_color ?? "#000000" }}
               />
               <p className="text-center text-xs text-muted-foreground">
                 Primary
@@ -170,7 +171,7 @@ export function ThemeCustomizer({ data, onChange }: ThemeCustomizerProps) {
             <div className="flex-1 space-y-2">
               <div
                 className="h-20 rounded"
-                style={{ backgroundColor: data.secondary_color }}
+                style={{ backgroundColor: data.secondary_color ?? "#666666" }}
               />
               <p className="text-center text-xs text-muted-foreground">
                 Secondary
@@ -179,7 +180,7 @@ export function ThemeCustomizer({ data, onChange }: ThemeCustomizerProps) {
             <div className="flex-1 space-y-2">
               <div
                 className="h-20 rounded"
-                style={{ backgroundColor: data.accent_color }}
+                style={{ backgroundColor: data.accent_color ?? "#007bff" }}
               />
               <p className="text-center text-xs text-muted-foreground">
                 Accent

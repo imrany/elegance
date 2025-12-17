@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { api, API_URL } from "@/lib/api";
+import { api, API_URL, HeroType } from "@/lib/api";
 import {
   Card,
   CardContent,
@@ -18,15 +18,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
 interface HeroSectionProps {
-  data: {
-    title: string;
-    subtitle: string;
-    cta_text: string;
-    cta_link: string;
-    background_image: string;
-    overlay: boolean;
-    overlay_opacity: number;
-  };
+  data: HeroType;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onChange: (data: any) => void;
 }
@@ -142,7 +134,7 @@ export function HeroSection({ data, onChange }: HeroSectionProps) {
         <div className="space-y-3">
           <Label>Background Image</Label>
           {data.background_image ? (
-            <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-border bg-secondary">
+            <div className="relative aspect-video w-full h-[350px] overflow-hidden rounded-lg border border-border bg-secondary">
               {uploadingImage ? (
                 <div className="flex h-full w-full items-center justify-center">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />

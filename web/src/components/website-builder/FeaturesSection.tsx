@@ -37,6 +37,7 @@ import {
   Zap,
   Star,
 } from "lucide-react";
+import { FeaturesType } from "@/lib/api";
 
 const AVAILABLE_ICONS = [
   { name: "ShoppingBag", label: "Shopping Bag", icon: ShoppingBag },
@@ -48,15 +49,7 @@ const AVAILABLE_ICONS = [
 ];
 
 interface FeaturesSectionProps {
-  data: {
-    title: string;
-    subtitle: string;
-    items: Array<{
-      icon: string;
-      title: string;
-      description: string;
-    }>;
-  };
+  data: FeaturesType;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onChange: (data: any) => void;
 }

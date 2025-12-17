@@ -7,51 +7,96 @@ interface ApiError {
   status: number;
 }
 
-export interface SectionData {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  hero?: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  about?: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  features?: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  contact?: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  theme?: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  seo?: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  social?: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  store: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  smtp: any;
+export interface HeroType {
+  background_image: string;
+  cta_link: string;
+  cta_text: string;
+  overlay: boolean;
+  overlay_opacity: number;
+  subtitle: string;
+  title: string;
 }
 
-export type WebsiteSettingKeys = {
-  HERO: "hero";
-  ABOUT: "about";
-  CONTACT: "contact";
-  FEATURES: "features";
-  THEME: "theme";
-  SEO: "seo";
-  SMTP: "smtp";
-  STORE: "store";
-  SOCIAL: "social";
-};
+export interface AboutType {
+  description: string;
+  features: string[];
+  image: string;
+  title: string;
+}
 
-export type WebsiteSettingKey =
-  | WebsiteSettingKeys[
-      | "HERO"
-      | "STORE"
-      | "SOCIAL"
-      | "ABOUT"
-      | "CONTACT"
-      | "FEATURES"
-      | "SEO"
-      | "SMTP"
-      | "THEME"]
-  | string;
+export interface FeaturesType {
+  items: {
+    icon: string;
+    title: string;
+    description: string;
+  }[];
+  subtitle: string;
+  title: string;
+}
+
+export interface ContactType {
+  address: string;
+  email: string;
+  map_url: string;
+  phone: string;
+  show_map: boolean;
+  subtitle: string;
+  title: string;
+}
+
+export interface ThemeType {
+  accent_color: string;
+  border_radius: string;
+  font_family: string;
+  primary_color: string;
+  secondary_color: string;
+}
+
+export interface SeoType {
+  description: string;
+  favicon: string;
+  keywords: string;
+  og_image: string;
+  title: string;
+}
+
+export interface SocialType {
+  facebook: string;
+  instagram: string;
+  linkedin: string;
+  tiktok: string;
+  twitter: string;
+  youtube: string;
+}
+
+export interface StoreType {
+  announcement: string;
+  currency: string;
+  description: string;
+  free_delivery_threshold: number;
+  logo: string;
+  name: string;
+}
+
+export interface SmtpType {
+  enabled: boolean;
+  from_email: string;
+  resend_api_key: string;
+}
+
+export interface SectionData {
+  hero?: HeroType;
+  about?: AboutType;
+  features?: FeaturesType;
+  contact?: ContactType;
+  theme?: ThemeType;
+  seo?: SeoType;
+  social?: SocialType;
+  store: StoreType;
+  smtp: SmtpType;
+}
+
+export type WebsiteSettingKey = keyof SectionData;
 
 export interface WebsiteConfig {
   id: string;

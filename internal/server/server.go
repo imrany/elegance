@@ -182,7 +182,7 @@ func (s *Server) setupRoutes() {
 			admin.PUT("/users", adminHandler.UpdateUser)
 
 			// Website builder management (admin endpoints)
-			admin.PUT("/website-config/:key", adminHandler.UpdateWebsiteSetting)
+			admin.PUT("/website-builder/:key", adminHandler.UpdateWebsiteSetting)
 
 			// Images management
 			admin.POST("/upload/image", adminHandler.UploadImage)

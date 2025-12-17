@@ -9,20 +9,14 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { api, API_URL } from "@/lib/api";
+import { api, API_URL, SeoType } from "@/lib/api";
 import { toast } from "sonner";
 import { Textarea } from "../ui/textarea";
 import { ImageIcon, Loader2, X } from "lucide-react";
 
 // SEO Settings Component
 interface SEOSettingsProps {
-  data: {
-    title: string;
-    description: string;
-    keywords: string;
-    og_image: string;
-    favicon: string;
-  };
+  data: SeoType;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onChange: (data: any) => void;
 }

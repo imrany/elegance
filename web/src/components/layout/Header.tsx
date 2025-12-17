@@ -7,6 +7,8 @@ import {
   LogOut,
   ShoppingCart,
   UserCog,
+  LogIn,
+  Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -23,6 +25,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useSiteSetting } from "@/hooks/useSiteSetting";
 import { useOrder } from "@/contexts/OrderContext";
 import { useCategories } from "@/hooks/useCategories";
+import { useGeneralContext } from "@/contexts/GeneralContext";
 
 export function Header() {
   const [isOpen, setIsOpen] = useState(false);
@@ -31,7 +34,7 @@ export function Header() {
   const { orderStatusCount } = useOrder();
   const { user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
-  const { data: categories } = useCategories();
+  const { categories } = useGeneralContext();
   const navLinks =
     categories?.map((category) => ({
       name: category.name,
@@ -167,13 +170,23 @@ export function Header() {
                     {user.email}
                   </div>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => navigate("/account")}
-                    className="cursor-pointer"
-                  >
-                    <UserCog className="mr-2 h-4 w-4" />
-                    Manage Account
-                  </DropdownMenuItem>
+                  {!isAdmin ? (
+                    <DropdownMenuItem
+                      onClick={() => navigate("/account")}
+                      className="cursor-pointer"
+                    >
+                      <UserCog className="mr-2 h-4 w-4" />
+                      Manage Account
+                    </DropdownMenuItem>
+                  ) : (
+                    <DropdownMenuItem
+                      onClick={() => navigate("/admin")}
+                      className="cursor-pointer"
+                    >
+                      <Settings className="mr-2 h-4 w-4" />
+                      Manage Website
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={signOut}
@@ -205,7 +218,7 @@ export function Header() {
           ) : (
             <Button variant="ghost" size="icon" asChild>
               <Link to="/auth">
-                <User className="h-5 w-5" />
+                <LogIn className="h-5 w-5" />
                 <span className="sr-only">Sign in</span>
               </Link>
             </Button>

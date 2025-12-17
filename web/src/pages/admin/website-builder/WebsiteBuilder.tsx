@@ -17,7 +17,19 @@ import {
   ToolCase,
 } from "lucide-react";
 import { toast } from "sonner";
-import { api, SectionData, WebsiteConfig, WebsiteSettingKey } from "@/lib/api";
+import {
+  AboutType,
+  api,
+  ContactType,
+  FeaturesType,
+  HeroType,
+  SectionData,
+  SeoType,
+  SocialType,
+  ThemeType,
+  WebsiteConfig,
+  WebsiteSettingKey,
+} from "@/lib/api";
 import { AboutSection } from "@/components/website-builder/AboutSection";
 import { FeaturesSection } from "@/components/website-builder/FeaturesSection";
 import { ContactSection } from "@/components/website-builder/ContactSection";
@@ -63,17 +75,17 @@ export default function WebsiteBuilder() {
 
     const currentLocal = localConfig[activeTab as keyof SectionData];
 
-    // FIX: Only sync from API if the user HAS NOT started making local changes
-    // Or if the tab has just switched and local data is missing.
     if (!hasChanges) {
+      // Only update if the content has actually changed to prevent loops
       if (JSON.stringify(currentLocal) !== JSON.stringify(parsedConfig)) {
         setLocalConfig((prev) => ({
           ...prev,
+          // We overwrite the entire section with the clean data from the API
           [activeTab]: parsedConfig,
         }));
       }
     }
-  }, [activeTab, parsedConfig, hasChanges]); // Added hasChanges to deps
+  }, [activeTab, parsedConfig, hasChanges]);
 
   // Save website config
   const saveMutation = useMutation({
@@ -97,11 +109,18 @@ export default function WebsiteBuilder() {
     },
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleConfigChange = (section: WebsiteSettingKey, data: any) => {
+  // Ensure 'section' is typed as WebsiteSettingKey
+  const handleConfigChange = <K extends WebsiteSettingKey>(
+    section: K,
+    data: Partial<SectionData[K]>,
+  ) => {
     setLocalConfig((prev) => ({
       ...prev,
-      [section]: { ...prev[section as keyof SectionData], ...data },
+      [section]: {
+        // Use type assertion here if the compiler still struggles with index signatures
+        ...(prev[section] as object),
+        ...data,
+      },
     }));
     setHasChanges(true);
   };
@@ -236,7 +255,7 @@ export default function WebsiteBuilder() {
             <TabsContent value="hero" className="space-y-4">
               {currentSectionData && (
                 <HeroSection
-                  data={currentSectionData}
+                  data={currentSectionData as HeroType}
                   onChange={(data) => handleConfigChange("hero", data)}
                 />
               )}
@@ -245,7 +264,7 @@ export default function WebsiteBuilder() {
             <TabsContent value="about" className="space-y-4">
               {currentSectionData && (
                 <AboutSection
-                  data={currentSectionData}
+                  data={currentSectionData as AboutType}
                   onChange={(data) => handleConfigChange("about", data)}
                 />
               )}
@@ -254,7 +273,7 @@ export default function WebsiteBuilder() {
             <TabsContent value="features" className="space-y-4">
               {currentSectionData && (
                 <FeaturesSection
-                  data={currentSectionData}
+                  data={currentSectionData as FeaturesType}
                   onChange={(data) => handleConfigChange("features", data)}
                 />
               )}
@@ -263,7 +282,7 @@ export default function WebsiteBuilder() {
             <TabsContent value="contact" className="space-y-4">
               {currentSectionData && (
                 <ContactSection
-                  data={currentSectionData}
+                  data={currentSectionData as ContactType}
                   onChange={(data) => handleConfigChange("contact", data)}
                 />
               )}
@@ -272,7 +291,7 @@ export default function WebsiteBuilder() {
             <TabsContent value="theme" className="space-y-4">
               {currentSectionData && (
                 <ThemeCustomizer
-                  data={currentSectionData}
+                  data={currentSectionData as ThemeType}
                   onChange={(data) => handleConfigChange("theme", data)}
                 />
               )}
@@ -281,7 +300,7 @@ export default function WebsiteBuilder() {
             <TabsContent value="seo" className="space-y-4">
               {currentSectionData && (
                 <SEOSettings
-                  data={currentSectionData}
+                  data={currentSectionData as SeoType}
                   onChange={(data) => handleConfigChange("seo", data)}
                 />
               )}
@@ -290,7 +309,7 @@ export default function WebsiteBuilder() {
             <TabsContent value="social" className="space-y-4">
               {currentSectionData && (
                 <SocialMediaLinks
-                  data={currentSectionData}
+                  data={currentSectionData as SocialType}
                   onChange={(data) => handleConfigChange("social", data)}
                 />
               )}

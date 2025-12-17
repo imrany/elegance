@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { api, API_URL } from "@/lib/api";
+import { AboutType, api, API_URL } from "@/lib/api";
 import {
   Card,
   CardContent,
@@ -12,17 +12,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Upload, X, Loader2, ImageIcon, Plus, Trash2 } from "lucide-react";
+import { X, Loader2, ImageIcon, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useMutation } from "@tanstack/react-query";
 
 interface AboutSectionProps {
-  data: {
-    title: string;
-    description: string;
-    image: string;
-    features: string[];
-  };
+  data: AboutType;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onChange: (data: any) => void;
 }

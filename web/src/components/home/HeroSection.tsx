@@ -4,8 +4,12 @@ import { ArrowRight } from "lucide-react";
 import heroImage from "@/assets/hero-kenyan-fashion.jpg";
 import { useSiteSetting } from "@/hooks/useSiteSetting";
 import { Skeleton } from "../ui/skeleton";
+import { useGeneralContext } from "@/contexts/GeneralContext";
 
 export function HeroSection() {
+  const { websiteConfig, categories } = useGeneralContext();
+  const hero = websiteConfig?.hero;
+  console.log(hero);
   const currentYear = new Date().getFullYear();
   const { data: setting, isLoading } = useSiteSetting("store");
   const value = (() => {
@@ -28,11 +32,16 @@ export function HeroSection() {
       {/* Background image */}
       <div className="absolute inset-0">
         <img
-          src={heroImage}
-          alt="Kenyan woman in luxury fashion"
+          src={hero.background_image || heroImage}
+          alt="Hero Background Image"
           className="h-full w-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-primary/80 via-primary/50 to-transparent" />
+        {hero.overlay && hero.background_image && (
+          <div
+            className="absolute inset-0 bg-black"
+            style={{ opacity: hero.overlay_opacity || 0.5 }}
+          />
+        )}
       </div>
 
       {!isLoading && (
@@ -44,13 +53,17 @@ export function HeroSection() {
                 New Collection {currentYear}
               </p>
               <h1 className="font-serif text-5xl font-light leading-tight text-primary-foreground md:text-6xl lg:text-7xl">
-                {siteName}
+                {hero.title || siteName}
                 <br />
-                <span className="font-semibold italic">Redefined</span>
+                <span className="font-semibold italic">
+                  {siteDescription
+                    ? `${hero.subtitle.slice(0, 9)}...`
+                    : "Redefined"}
+                </span>
               </h1>
 
               <p className="text-lg leading-relaxed text-primary-foreground/80">
-                {siteDescription}
+                {siteDescription ? siteDescription : hero.subtitle}
               </p>
               <div className="flex flex-wrap gap-4">
                 <Button
@@ -58,19 +71,29 @@ export function HeroSection() {
                   size="lg"
                   className="group gap-2 bg-accent text-accent-foreground hover:bg-accent/90"
                 >
-                  <Link to="/category/women">
-                    Shop Women
+                  <Link
+                    to={hero.cta_link || `/category/${categories[0].slug}`}
+                    className="capitalize"
+                  >
+                    {hero.cta_text || `Shop ${categories[0].name}`}
                     <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </Link>
                 </Button>
-                <Button
-                  asChild
-                  size="lg"
-                  variant="outline"
-                  className="border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground hover:text-primary"
-                >
-                  <Link to="/category/men">Shop Men</Link>
-                </Button>
+                {categories && categories.length > 1 && (
+                  <Button
+                    asChild
+                    size="lg"
+                    variant="outline"
+                    className="border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground hover:text-primary"
+                  >
+                    <Link
+                      to={`/category/${categories[1].slug}`}
+                      className="capitalize"
+                    >
+                      Shop {categories[1].name}
+                    </Link>
+                  </Button>
+                )}
               </div>
             </div>
           </div>

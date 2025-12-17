@@ -68,7 +68,7 @@ Format: `{version}_{name}_{database}.{direction}.sql`
 
 ```bash
 # Build
-go build -o bin/migrate cmdmigrate//main.gomain.go
+go build -o bin/migrate cmd/migrate/main.go
 
 # Or use Makefile
 make build-migrate
