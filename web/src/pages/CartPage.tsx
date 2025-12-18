@@ -133,7 +133,7 @@ export default function CartPage() {
                         }
                       >
                         <Trash2 className="mr-1 h-4 w-4" />
-                        Remove
+                        <p className="hidden md:inline">Remove</p>
                       </Button>
                     </div>
                   </div>

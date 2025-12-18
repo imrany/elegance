@@ -134,13 +134,13 @@ export function Header() {
         </nav>
 
         {/* Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+          {/* Search: Hidden on XS, shown on SM+ */}
           <Button variant="ghost" size="icon" className="hidden sm:flex">
             <Search className="h-5 w-5" />
-            <span className="sr-only">Search</span>
           </Button>
           {user ? (
-            <>
+            <div className="flex items-center gap-1 sm:gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon">
@@ -181,7 +181,13 @@ export function Header() {
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              <Button variant="ghost" size="icon" className="relative" asChild>
+              {/* Orders Badge */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative hidden xs:flex"
+                asChild
+              >
                 <Link to="/orders">
                   <ShoppingCart className="h-5 w-5" />
                   {(orderStatusCount?.pending ?? 0) +
@@ -197,7 +203,7 @@ export function Header() {
                   <span className="sr-only">Orders page</span>
                 </Link>
               </Button>
-            </>
+            </div>
           ) : (
             <Button variant="ghost" size="icon" asChild>
               <Link to="/auth">
@@ -206,15 +212,16 @@ export function Header() {
               </Link>
             </Button>
           )}
-          <Button variant="ghost" size="icon" asChild>
+
+          {/* Cart: Always visible */}
+          <Button variant="ghost" size="icon" className="relative" asChild>
             <Link to="/cart">
               <ShoppingBag className="h-5 w-5" />
               {itemCount > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-[10px] font-medium text-accent-foreground">
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-accent-foreground border-2 border-background">
                   {itemCount}
                 </span>
               )}
-              <span className="sr-only">Cart</span>
             </Link>
           </Button>
         </div>
