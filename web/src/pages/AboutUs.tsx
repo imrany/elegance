@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Mail, Phone, MapPin, Clock, Send, Check } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function AboutUs() {
   const { websiteConfig } = useGeneralContext();
@@ -51,6 +51,13 @@ export default function AboutUs() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  useEffect(() => {
+    scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "smooth",
+    });
+  }, []);
   return (
     <Layout>
       {/* Hero Section */}
