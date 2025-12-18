@@ -44,7 +44,7 @@ export function Header() {
       {/* Top bar */}
       <div className="bg-primary text-primary-foreground">
         {store.announcement && (
-          <div className="container flex h-8 items-center justify-center text-xs tracking-elegant">
+          <div className="container text-center flex h-8 items-center justify-center text-xs tracking-elegant">
             {store.announcement}
           </div>
         )}
