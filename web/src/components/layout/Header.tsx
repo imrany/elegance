@@ -22,9 +22,7 @@ import {
 import { useState } from "react";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { useSiteSetting } from "@/hooks/useSiteSetting";
 import { useOrder } from "@/contexts/OrderContext";
-import { useCategories } from "@/hooks/useCategories";
 import { useGeneralContext } from "@/contexts/GeneralContext";
 
 export function Header() {

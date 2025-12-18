@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { useSiteSetting } from "@/hooks/useSiteSetting";
+import { useGeneralContext } from "@/contexts/GeneralContext";
 
 const navItems = [
   { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
@@ -32,20 +32,9 @@ export default function AdminLayout() {
   const navigate = useNavigate();
   const { user, isAdmin, isLoading, signOut } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { data: setting, isLoading: settingIsLoading } =
-    useSiteSetting("store");
-  const value = (() => {
-    if (typeof setting?.value === "string" && setting) {
-      try {
-        return JSON.parse(setting?.value);
-      } catch (e) {
-        console.error("Error parsing store settings value:", e);
-        return null;
-      }
-    }
-    return null;
-  })();
-  const siteName = value?.["name"] || "[Your Store Name]";
+  const { websiteConfig } = useGeneralContext();
+  const store = websiteConfig?.store;
+  const siteName = store.name || "[Your Store Name]";
 
   useEffect(() => {
     if (!isLoading) {
@@ -93,19 +82,15 @@ export default function AdminLayout() {
         <div className="flex h-full flex-col">
           {/* Logo */}
           <div className="flex h-16 items-center border-b border-border px-6">
-            {!settingIsLoading && (
-              <>
-                <Link
-                  to="/"
-                  className="font-serif text-xl font-semibold tracking-elegant text-foreground"
-                >
-                  {siteName}
-                </Link>
-                <span className="ml-2 rounded bg-accent px-2 py-0.5 text-xs font-medium text-accent-foreground">
-                  Admin
-                </span>
-              </>
-            )}
+            <Link
+              to="/"
+              className="font-serif text-xl font-semibold tracking-elegant text-foreground"
+            >
+              {siteName}
+            </Link>
+            <span className="ml-2 rounded bg-accent px-2 py-0.5 text-xs font-medium text-accent-foreground">
+              Admin
+            </span>
           </div>
 
           {/* Navigation */}

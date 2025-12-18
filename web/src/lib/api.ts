@@ -464,22 +464,9 @@ class ApiClient {
     });
   }
 
-  // Settings
-  async getSetting(key: string) {
-    return this.request<{ data: SiteSetting }>(`/api/settings/${key}`);
-  }
-
   // Admin: Get all orders
   async getAllOrders() {
     return this.request<{ data: Order[] }>("/api/admin/orders");
-  }
-
-  // Admin: Update setting
-  async updateSetting(key: string, value: string) {
-    return this.request<{ data: SiteSetting }>(`/api/admin/settings/${key}`, {
-      method: "PUT",
-      body: JSON.stringify({ value }),
-    });
   }
 
   async updateUser(userData: {

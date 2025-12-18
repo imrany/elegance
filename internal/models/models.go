@@ -90,7 +90,7 @@ type Order struct {
 }
 
 // SiteSetting represents a site configuration setting
-type SiteSetting struct {
+type WebsiteSetting struct {
 	ID        string    `json:"id" db:"id"`
 	Key       string    `json:"key" db:"key"`
 	Value     string    `json:"value" db:"value"`

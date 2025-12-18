@@ -1,22 +1,12 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { useSiteSetting } from "@/hooks/useSiteSetting";
 import { Skeleton } from "../ui/skeleton";
+import { useGeneralContext } from "@/contexts/GeneralContext";
 
 export function LuxuryBanner() {
-  const { data: setting, isLoading } = useSiteSetting("store");
-  const value = (() => {
-    if (typeof setting?.value === "string" && setting) {
-      try {
-        return JSON.parse(setting?.value);
-      } catch (e) {
-        console.error("Error parsing store settings value:", e);
-        return null;
-      }
-    }
-    return null;
-  })();
-  const siteName = value?.["name"] || "[Your Store Name]";
+  const { websiteConfig } = useGeneralContext();
+  const store = websiteConfig?.store;
+  const siteName = store.name || "[Your Store Name]";
 
   return (
     <section className="relative overflow-hidden bg-primary py-24">
@@ -26,13 +16,9 @@ export function LuxuryBanner() {
 
       <div className="container relative">
         <div className="mx-auto max-w-3xl text-center">
-          {isLoading ? (
-            <Skeleton className="h-4 w-48" />
-          ) : (
-            <p className="text-sm font-medium tracking-luxury uppercase text-accent">
-              The {siteName} Promise
-            </p>
-          )}
+          <p className="text-sm font-medium tracking-luxury uppercase text-accent">
+            The {siteName} Promise
+          </p>
           <h2 className="mt-6 font-serif text-3xl font-light leading-relaxed text-primary-foreground md:text-4xl lg:text-5xl">
             "Crafted with passion, worn with confidence"
           </h2>

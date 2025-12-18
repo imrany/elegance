@@ -35,10 +35,6 @@ type DB interface {
 	DeleteOrder(id string) error
 	UpdateOrder(order *models.Order) error
 
-	// Settings operations
-	GetSiteSetting(key string) (*models.SiteSetting, error)
-	UpdateSiteSetting(key string, value string) error
-
 	// Admin operations
 	UpdateOrderStatus(id, status, paymentStatus string) error
 	CreateProduct(product *models.Product) error
@@ -46,8 +42,8 @@ type DB interface {
 	DeleteProduct(id string) error
 
 	// website settings configuration
-	GetAllWebsiteSettings() ([]models.SiteSetting, error)
-	GetWebsiteSettingByKey(key string) (models.SiteSetting, error)
+	GetAllWebsiteSettings() ([]models.WebsiteSetting, error)
+	GetWebsiteSettingByKey(key string) (models.WebsiteSetting, error)
 	UpdateWebsiteSetting(key string, value string) error
 
 	// User management (admin)

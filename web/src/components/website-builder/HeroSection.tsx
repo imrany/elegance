@@ -144,11 +144,7 @@ export function HeroSection({ data, onChange }: HeroSectionProps) {
         {/* Background Image */}
         <div className="space-y-3">
           <Label>Background Image</Label>
-          <div className="relative w-full overflow-hidden rounded-lg border border-border bg-secondary">
-            {/*
-                       Replaced fixed h-[350px] with aspect-video (16:9).
-                       On very small screens, this maintains proportion without overflow.
-                    */}
+          <div className="relative w-full overflow-hidden rounded-lg border border-border border-dashed bg-secondary/50">
             <div className="relative aspect-video w-full min-h-[200px] max-h-[400px]">
               {data.background_image && !uploadingImage ? (
                 <>

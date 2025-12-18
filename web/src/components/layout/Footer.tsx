@@ -116,10 +116,10 @@ export function Footer() {
             </h3>
             <nav className="flex flex-col gap-3">
               <Link
-                to="#"
+                to="/about-us"
                 className="text-sm text-primary-foreground/70 transition-colors hover:text-accent"
               >
-                Contact Us
+                About Us
               </Link>
               <Link
                 to="#"

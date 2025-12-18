@@ -4,6 +4,7 @@ import { CategoryGrid } from "@/components/home/CategoryGrid";
 import { FeaturedProducts } from "@/components/home/FeaturedProducts";
 import { NewArrivals } from "@/components/home/NewArrivals";
 import { LuxuryBanner } from "@/components/home/LuxuryBanner";
+import { FeaturesSections } from "@/components/home/FeaturesSection";
 
 const Index = () => {
   return (
@@ -13,6 +14,7 @@ const Index = () => {
       <FeaturedProducts />
       <LuxuryBanner />
       <NewArrivals />
+      <FeaturesSections />
     </Layout>
   );
 };

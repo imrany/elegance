@@ -7,13 +7,13 @@ import (
 	"github.com/imrany/ecommerce/internal/models"
 )
 
-func (pg *PostgresDB) GetWebsiteSettingByKey(key string) (models.SiteSetting, error) {
+func (pg *PostgresDB) GetWebsiteSettingByKey(key string) (models.WebsiteSetting, error) {
 	query := `
 		SELECT id, key, value, created_at, updated_at
 		FROM website_settings_config
 		WHERE key = $1
 	`
-	var s models.SiteSetting
+	var s models.WebsiteSetting
 	err := pg.db.QueryRow(query, key).Scan(
 		&s.ID,
 		&s.Key,
@@ -22,15 +22,15 @@ func (pg *PostgresDB) GetWebsiteSettingByKey(key string) (models.SiteSetting, er
 		&s.UpdatedAt,
 	)
 	if err != nil {
-		return models.SiteSetting{}, fmt.Errorf("failed to retrieve setting for key '%s': %w", key, err)
+		return models.WebsiteSetting{}, fmt.Errorf("failed to retrieve setting for key '%s': %w", key, err)
 	}
 	return s, nil
 }
 
 // GetAllWebsiteSettings retrieves all website settings, ordered by creation date.
-// Returns a slice of models.SiteSetting. If no settings are found, an empty slice is returned.
-func (pg *PostgresDB) GetAllWebsiteSettings() ([]models.SiteSetting, error) {
-	var settings []models.SiteSetting
+// Returns a slice of models.WebsiteSetting. If no settings are found, an empty slice is returned.
+func (pg *PostgresDB) GetAllWebsiteSettings() ([]models.WebsiteSetting, error) {
+	var settings []models.WebsiteSetting
 	query := `
 		SELECT id, key, value, created_at, updated_at
 		FROM website_settings_config
@@ -44,7 +44,7 @@ func (pg *PostgresDB) GetAllWebsiteSettings() ([]models.SiteSetting, error) {
 	defer rows.Close()
 
 	for rows.Next() {
-		var s models.SiteSetting
+		var s models.WebsiteSetting
 		err := rows.Scan(
 			&s.ID,
 			&s.Key,

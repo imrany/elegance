@@ -204,34 +204,42 @@ export function FeaturesSection({ data, onChange }: FeaturesSectionProps) {
         <div className="space-y-2">
           <Label>Preview</Label>
           <div className="rounded-lg border border-border p-6">
-            <div className="text-center">
-              <h2 className="mb-2 text-2xl font-bold">
-                {data.title || "Why Choose Us"}
-              </h2>
-              <p className="mb-8 text-muted-foreground">
-                {data.subtitle || "Discover what makes us special"}
-              </p>
-            </div>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {data &&
-                data.items &&
-                data.items.map((item, index) => {
-                  const IconComponent = getIconComponent(item.icon);
-                  return (
-                    <div key={index} className="text-center">
-                      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-                        <IconComponent className="h-8 w-8 text-primary" />
-                      </div>
-                      <h3 className="mb-2 text-lg font-semibold">
-                        {item.title}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {item.description}
-                      </p>
-                    </div>
-                  );
-                })}
-            </div>
+            <section className="bg-secondary/50">
+              <div className="container mx-auto">
+                <div className="mb-12 text-center">
+                  <p className="text-sm font-medium tracking-luxury uppercase text-accent">
+                    {data.title || "Why Choose Us"}
+                  </p>
+                  <h2 className="mt-2 font-serif text-3xl font-light text-foreground md:text-4xl">
+                    {data.subtitle || "Discover what makes us special"}
+                  </h2>
+                  <div className="mx-auto mt-4 h-px w-16 bg-accent" />
+                </div>
+                <div className="grid md:grid-cols-3 gap-8">
+                  {data &&
+                    data.items &&
+                    data.items.map((item, index) => {
+                      const IconComponent = getIconComponent(item.icon);
+                      return (
+                        <Card
+                          key={index}
+                          className="p-8 bg-inherit shadow-none border-none flex flex-col justify-center items-center"
+                        >
+                          <div className="text-6xl mb-4">
+                            <IconComponent className="h-8 w-8 text-primary" />
+                          </div>
+                          <h3 className="text-xl font-medium capitalize mb-3">
+                            {item.title}
+                          </h3>
+                          <p className="text-muted-foreground text-center">
+                            {item.description}
+                          </p>
+                        </Card>
+                      );
+                    })}
+                </div>
+              </div>
+            </section>
           </div>
         </div>
 

@@ -31,6 +31,7 @@ import AccountPage from "./pages/AccountPage";
 import WebsiteBuilder from "./pages/admin/website-builder/WebsiteBuilder";
 import HomePage from "./pages/admin/website-builder/HomePage";
 import { GeneralProvider } from "./contexts/GeneralContext";
+import AboutUs from "./pages/AboutUs";
 
 const queryClient = new QueryClient();
 
@@ -96,7 +97,7 @@ const App = () => {
 
                         {/* Public Routes */}
                         <Route path="/" element={<Index />} />
-                        <Route path="/preview" element={<HomePage />} />
+                        <Route path="/about-us" element={<AboutUs />} />
                         <Route
                           path="/category/:slug"
                           element={<CategoryPage />}

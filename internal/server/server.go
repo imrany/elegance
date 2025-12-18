@@ -90,7 +90,7 @@ func (s *Server) setupRoutes() {
 		// Health check
 		api.GET("/health", s.handleHealth)
 
-		// website builder endpoints (public) - for frontend display
+		// website builder endpoints (public)
 		websiteBuilder := api.Group("/website-builder")
 		{
 			websiteBuilder.GET("", s.handler.GetAllWebsiteConfig)
@@ -127,12 +127,6 @@ func (s *Server) setupRoutes() {
 			products.GET("/featured", s.handler.GetFeaturedProducts)
 			products.GET("/new", s.handler.GetNewProducts)
 			products.GET("/:slug", s.handler.GetProductBySlug)
-		}
-
-		// Settings (public)
-		settings := api.Group("/settings")
-		{
-			settings.GET("/:key", s.handler.GetSiteSetting)
 		}
 
 		// Protected routes (require authentication)
@@ -187,9 +181,6 @@ func (s *Server) setupRoutes() {
 			// Images management
 			admin.POST("/upload/image", adminHandler.UploadImage)
 			admin.DELETE("/images/:filename", adminHandler.DeleteImage)
-
-			// Settings management
-			admin.PUT("/settings/:key", adminHandler.UpdateSetting)
 		}
 	}
 

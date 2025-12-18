@@ -2,15 +2,12 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import heroImage from "@/assets/hero-kenyan-fashion.jpg";
-import { useSiteSetting } from "@/hooks/useSiteSetting";
-import { Skeleton } from "../ui/skeleton";
 import { useGeneralContext } from "@/contexts/GeneralContext";
 
 export function HeroSection() {
   const { websiteConfig, categories } = useGeneralContext();
   const store = websiteConfig?.store;
   const hero = websiteConfig?.hero;
-  console.log(hero);
   const currentYear = new Date().getFullYear();
 
   return (

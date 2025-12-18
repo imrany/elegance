@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { X, Loader2, ImageIcon, Plus } from "lucide-react";
+import { X, Loader2, ImageIcon, Plus, Check } from "lucide-react";
 import { toast } from "sonner";
 import { useMutation } from "@tanstack/react-query";
 
@@ -232,39 +232,57 @@ export function AboutSection({ data, onChange }: AboutSectionProps) {
         <div className="space-y-2">
           <Label>Preview</Label>
           <div className="rounded-lg border border-border p-6">
-            <div className="grid gap-6 md:grid-cols-2 md:items-center">
-              <div>
-                <h2 className="mb-4 text-2xl font-bold">
-                  {data.title || "About Us"}
-                </h2>
-                <p className="mb-4 text-muted-foreground">
-                  {data.description || "Your description will appear here..."}
-                </p>
-                {data && data.features?.length > 0 && (
-                  <ul className="space-y-2">
-                    {data.features.map((feature, index) => (
-                      <li key={index} className="flex items-center gap-2">
-                        <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-                        <span className="text-sm">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              <div className="rounded-lg bg-secondary/50 p-4">
-                {data.image ? (
-                  <img
-                    src={data.image}
-                    alt="About"
-                    className="h-full w-full rounded-lg object-cover"
-                  />
-                ) : (
-                  <div className="flex aspect-square items-center justify-center text-muted-foreground">
-                    <ImageIcon className="h-16 w-16" />
+            {data.image && (
+              <section>
+                <div className="container">
+                  <div className="grid gap-12 lg:grid-cols-2 lg:gap-16 items-center">
+                    {/* Image */}
+                    <div className="order-2 lg:order-1">
+                      <div className="relative aspect-[4/3] overflow-hidden rounded-2xl shadow-2xl">
+                        <img
+                          src={data.image}
+                          alt={data.title}
+                          className="h-full w-full object-cover transition-transform duration-700 hover:scale-105"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                      </div>
+                    </div>
+
+                    {/* Features List */}
+                    <div className="order-1 lg:order-2 space-y-8">
+                      <div>
+                        <h2 className="font-serif text-3xl font-light text-foreground mb-4">
+                          What Makes Us Different
+                        </h2>
+                        <p className="text-muted-foreground">
+                          Our commitment to excellence sets us apart
+                        </p>
+                      </div>
+
+                      <div className="space-y-4">
+                        {(data.features || []).map((feature, index) => (
+                          <div
+                            key={index}
+                            className="flex items-start gap-3 rounded-lg bg-secondary/50"
+                          >
+                            <div className="flex-shrink-0">
+                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/10">
+                                <Check className="h-4 w-4 text-accent" />
+                              </div>
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-medium text-foreground">
+                                {feature}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                )}
-              </div>
-            </div>
+                </div>
+              </section>
+            )}
           </div>
         </div>
       </CardContent>

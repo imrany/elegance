@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { useSiteSetting } from "@/hooks/useSiteSetting";
+import { useGeneralContext } from "@/contexts/GeneralContext";
 
 const signInSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -47,19 +47,9 @@ export default function AuthPage() {
     lastName?: string;
     phoneNumber?: string;
   }>({});
-  const { data: setting } = useSiteSetting("store");
-  const value = (() => {
-    if (typeof setting?.value === "string" && setting) {
-      try {
-        return JSON.parse(setting?.value);
-      } catch (e) {
-        console.error("Error parsing store settings value:", e);
-        return null;
-      }
-    }
-    return null;
-  })();
-  const siteName = value?.["name"] || "[Your Store Name]";
+  const { websiteConfig } = useGeneralContext();
+  const store = websiteConfig?.store;
+  const siteName = store.name || "[Your Store Name]";
 
   useEffect(() => {
     if (user && !isLoading) {
