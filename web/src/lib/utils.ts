@@ -1,6 +1,13 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { SectionData } from "./api";
+import {
+  CreditCard,
+  Package,
+  RotateCcw,
+  ShoppingCart,
+  User,
+} from "lucide-react";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -196,3 +203,131 @@ export const DEFAULT_CONFIG: SectionData = {
     message: "",
   },
 };
+
+export const faqCategories = [
+  {
+    title: "Orders & Shipping",
+    icon: Package,
+    faqs: [
+      {
+        question: "How long does shipping take?",
+        answer:
+          "Standard shipping typically takes 3-5 business days. Express shipping is available for 1-2 business day delivery. International orders may take 7-14 business days depending on the destination.",
+      },
+      {
+        question: "Do you ship internationally?",
+        answer:
+          "No, we do not ship internationally. We ship locally inside Kenya. Shipping costs and delivery times vary by location. You can check available shipping options at checkout.",
+      },
+      {
+        question: "How can I track my order?",
+        answer:
+          "Once your order ships, you'll receive a tracking number via email. You can also track your order by logging into your account and visiting the 'Orders' section.",
+      },
+      {
+        question: "Can I change my shipping address after placing an order?",
+        answer:
+          "If your order hasn't shipped yet, contact us immediately and we'll do our best to update the address. Once shipped, we cannot modify the delivery address.",
+      },
+    ],
+  },
+  {
+    title: "Returns & Refunds",
+    icon: RotateCcw,
+    faqs: [
+      {
+        question: "What is your return policy?",
+        answer:
+          "We offer a 30-day return policy for most items. Products must be unused, in original packaging, and with all tags attached. Some items like personalized products may not be eligible for return.",
+      },
+      {
+        question: "How do I initiate a return?",
+        answer:
+          "Log into your account, go to 'Order History', select the order, and click 'Return Items'. Follow the prompts to complete your return request. You'll receive a return shipping label via email.",
+      },
+      {
+        question: "When will I receive my refund?",
+        answer:
+          "Refunds are processed within 5-7 business days after we receive your return. The refund will be credited to your original payment method. Please allow additional time for your bank to process the refund.",
+      },
+      {
+        question: "Can I exchange an item?",
+        answer:
+          "Yes! Follow the return process and place a new order for the item you want. This ensures you get your preferred item as quickly as possible.",
+      },
+    ],
+  },
+  {
+    title: "Payment & Pricing",
+    icon: CreditCard,
+    faqs: [
+      {
+        question: "What payment methods do you accept?",
+        answer:
+          "Currently We only accept manual M-Pesa payment. All transactions would be handled on your side.",
+      },
+      {
+        question: "Is it safe to use my credit card?",
+        answer:
+          "Absolutely! We use industry-standard SSL encryption to protect your payment information. We never store your complete credit card details on our servers.",
+      },
+      {
+        question: "Do you offer discounts or promotions?",
+        answer:
+          "Yes! Sign up for our newsletter to receive exclusive offers and be the first to know about sales. We also offer seasonal promotions throughout the year.",
+      },
+    ],
+  },
+  {
+    title: "Account & Profile",
+    icon: User,
+    faqs: [
+      {
+        question: "Do I need an account to place an order?",
+        answer:
+          "No, you can checkout as a guest. However, creating an account allows you to track orders, save addresses, and access exclusive member benefits.",
+      },
+      {
+        question: "How do I reset my password?",
+        answer:
+          "Click 'Sign In', then 'Forgot Password'. Enter your email address and we'll send you a password reset link. Follow the instructions in the email to create a new password.",
+      },
+      {
+        question: "Can I update my account information?",
+        answer:
+          "Yes! Log into your account and go to 'Account Settings' to update your email, password, shipping addresses, and other preferences.",
+      },
+      {
+        question: "How do I delete my account?",
+        answer:
+          "Contact our customer support team and we'll process your account deletion request. Please note this action is permanent and cannot be undone.",
+      },
+    ],
+  },
+  {
+    title: "Products & Stock",
+    icon: ShoppingCart,
+    faqs: [
+      {
+        question: "How do I know if an item is in stock?",
+        answer:
+          "Product availability is shown on each product page. If an item is out of stock, you can sign up for restock notifications to be alerted when it's available again.",
+      },
+      {
+        question: "Do you offer product warranties?",
+        answer:
+          "Yes, most products come with a manufacturer's warranty. Warranty details and duration vary by product and are listed on the product page.",
+      },
+      {
+        question: "Can I request a product that's not in your catalog?",
+        answer:
+          "We love hearing from our customers! Send us your product suggestions through our contact form, and we'll consider adding them to our inventory.",
+      },
+      {
+        question: "Are your products authentic?",
+        answer:
+          "Yes, we only sell 100% authentic products. All items are sourced directly from authorized distributors and manufacturers.",
+      },
+    ],
+  },
+];

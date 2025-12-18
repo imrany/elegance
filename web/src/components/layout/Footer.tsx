@@ -122,19 +122,19 @@ export function Footer() {
                 About Us
               </Link>
               <Link
-                to="#"
+                to="/faqs?search=shipping"
                 className="text-sm text-primary-foreground/70 transition-colors hover:text-accent"
               >
                 Shipping & Returns
               </Link>
               <Link
-                to="#"
+                to="/guide"
                 className="text-sm text-primary-foreground/70 transition-colors hover:text-accent"
               >
-                Size Guide
+                Guide
               </Link>
               <Link
-                to="#"
+                to="/faqs"
                 className="text-sm text-primary-foreground/70 transition-colors hover:text-accent"
               >
                 FAQs
@@ -173,13 +173,13 @@ export function Footer() {
           </p>
           <div className="flex gap-6">
             <Link
-              to="#"
+              to="/faqs?search=account"
               className="text-xs text-primary-foreground/50 hover:text-primary-foreground"
             >
               Privacy Policy
             </Link>
             <Link
-              to="#"
+              to="/faqs?search=shipping"
               className="text-xs text-primary-foreground/50 hover:text-primary-foreground"
             >
               Terms of Service
