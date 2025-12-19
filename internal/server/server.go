@@ -15,6 +15,7 @@ import (
 	"github.com/imrany/elegance/internal/database"
 	"github.com/imrany/elegance/internal/handlers"
 	"github.com/imrany/elegance/internal/middleware"
+	"github.com/spf13/viper"
 )
 
 //go:embed dist/*
@@ -80,7 +81,7 @@ func New(cfg *Config, db database.DB) *Server {
 // setupRoutes configures all API routes
 func (s *Server) setupRoutes() {
 	// static assets
-	s.router.Static("/uploads", "./uploads")
+	s.router.Static("/uploads", viper.GetString("upload-dir"))
 
 	// API v1 routes
 	api := s.router.Group("/api")
@@ -253,7 +254,7 @@ func (s *Server) handleHealth(c *gin.Context) {
 		"status":    "ok",
 		"timestamp": time.Now().Unix(),
 		"database":  s.config.DBType,
-		"version":   "0.2.0",
+		"version":   "0.2.1",
 	})
 }
 
