@@ -88,5 +88,4 @@ INSERT INTO categories (name, slug, description, image_url) VALUES
 ('Women', 'women', 'Elegant fashion for women', 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=800'),
 ('Men', 'men', 'Sophisticated menswear', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800'),
 ('Accessories', 'accessories', 'Luxury accessories', 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800'),
-('New Arrivals', 'new-arrivals', 'Latest additions to our collection', 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800')
 ON CONFLICT (slug) DO NOTHING;

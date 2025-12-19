@@ -30,10 +30,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
 
   async function getOrders(key?: string, value?: string) {
     setIsLoading(true);
-    const { data: orders } = await api.getOrders(
-      key || "user_id",
-      value || user?.id,
-    );
+    const orders = await api.getOrders(key || "user_id", value || user?.id);
     setOrders(orders);
     setIsLoading(false);
     return orders;
@@ -45,7 +42,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
 
   async function addOrder(orderData: Order) {
     setIsLoading(true);
-    const { data: order } = await api.createOrder(orderData);
+    const order = await api.createOrder(orderData);
     setOrders((prev) => [...prev, order]);
     setIsLoading(false);
   }

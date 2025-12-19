@@ -73,7 +73,7 @@ export default function UsersPage() {
     queryKey: ["admin-users"],
     queryFn: async () => {
       const response = await api.getAllUsers();
-      return response.data;
+      return response;
     },
   });
 
@@ -83,7 +83,7 @@ export default function UsersPage() {
 
   const ordersMutation = useMutation({
     mutationFn: ({ userId }: { userId: string }) => api.getUserOrders(userId),
-    onSuccess: ({ data: orders }) => {
+    onSuccess: (orders) => {
       setUserOrders(orders);
       setIsLoadingOrders(false);
     },
@@ -129,8 +129,8 @@ export default function UsersPage() {
         setSelectedTab("all");
       }
     },
-    onError: () => {
-      toast.error("Failed to delete user");
+    onError: (error) => {
+      toast.error(error.message || "Failed to delete user");
     },
   });
 

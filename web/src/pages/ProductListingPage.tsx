@@ -4,7 +4,30 @@ import { Layout } from "@/components/layout/Layout";
 import { ProductCard } from "@/components/products/ProductCard";
 
 export const ProductListingPage = () => {
-  const { data: products, error, isLoading } = useProducts();
+  const { data: products, isLoading } = useProducts();
+
+  if (!products) {
+    return (
+      <Layout>
+        <div className="container py-32">
+          <div className="mx-auto max-w-md text-center">
+            <h1 className="mt-6 font-serif text-2xl font-light text-foreground">
+              No Product added yet
+            </h1>
+            <p className="mt-2 text-muted-foreground">Try again later</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center p-8">
+        <Loader2 className="animate-spin w-8 h-8 text-accent" />
+      </div>
+    );
+  }
 
   return (
     <Layout>
@@ -19,20 +42,6 @@ export const ProductListingPage = () => {
                 className={`animate-fade-up shadow-none delay-${((index % 4) + 1) * 100}`}
               />
             ))}
-          </div>
-        )}
-
-        {!products && (
-          <div className="flex justify-center p-8">
-            <p className="text-center text-muted-foreground">
-              No products found.
-            </p>
-          </div>
-        )}
-
-        {isLoading && (
-          <div className="flex justify-center p-8">
-            <Loader2 className="animate-spin w-8 h-8 text-accent" />
           </div>
         )}
       </div>

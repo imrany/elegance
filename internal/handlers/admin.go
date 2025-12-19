@@ -39,22 +39,40 @@ func NewAdminHandler(db database.DB, jwtSecret string) *AdminHandler {
 func (h *AdminHandler) GetAllOrders(c *gin.Context) {
 	orders, err := h.db.GetOrdersByOption("", nil)
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch orders", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to fetch orders",
+		})
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, orders)
+	utils.SendResponse(c, utils.Response{
+		Status:  http.StatusOK,
+		Success: true,
+		Message: "Orders fetched successfully",
+		Data:    orders,
+	})
 }
 
 // GetAllProducts retrieves all products (admin only)
 func (h *AdminHandler) GetAllProducts(c *gin.Context) {
 	products, err := h.db.GetProducts(models.ProductFilters{})
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch products", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to fetch products",
+		})
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, products)
+	utils.SendResponse(c, utils.Response{
+		Status:  http.StatusOK,
+		Success: true,
+		Message: "Products fetched successfully",
+		Data:    products,
+	})
 }
 
 // CreateProduct creates a new product (admin only)
@@ -62,16 +80,28 @@ func (h *AdminHandler) CreateProduct(c *gin.Context) {
 	var product models.Product
 
 	if err := c.ShouldBindJSON(&product); err != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid request body", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusBadRequest,
+			Success: false,
+			Message: "Invalid request body",
+		})
 		return
 	}
 
 	if err := h.db.CreateProduct(&product); err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to create product", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to create product",
+		})
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusCreated, product)
+	utils.SendResponse(c, utils.Response{
+		Status:  http.StatusCreated,
+		Success: true,
+		Message: "Product created successfully",
+	})
 }
 
 // UpdateProduct updates an existing product (admin only)
@@ -80,18 +110,30 @@ func (h *AdminHandler) UpdateProduct(c *gin.Context) {
 
 	var product models.Product
 	if err := c.ShouldBindJSON(&product); err != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid request body", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusBadRequest,
+			Success: false,
+			Message: "Invalid request body",
+		})
 		return
 	}
 
 	product.ID = id
 
 	if err := h.db.UpdateProduct(&product); err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to update product", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to update product",
+		})
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, product)
+	utils.SendResponse(c, utils.Response{
+		Status:  http.StatusOK,
+		Success: true,
+		Message: "Product updated successfully",
+	})
 }
 
 // DeleteProduct deletes a product (admin only)
@@ -99,11 +141,19 @@ func (h *AdminHandler) DeleteProduct(c *gin.Context) {
 	id := c.Param("id")
 
 	if err := h.db.DeleteProduct(id); err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete product", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to delete product",
+		})
 		return
 	}
 
-	utils.MessageResponse(c, http.StatusOK, "Product deleted successfully")
+	utils.SendResponse(c, utils.Response{
+		Status:  http.StatusOK,
+		Success: true,
+		Message: "Product deleted successfully",
+	})
 }
 
 // UpdateOrderStatus updates an order's status (admin only)
@@ -116,33 +166,57 @@ func (h *AdminHandler) UpdateOrderStatus(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid request body", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusBadRequest,
+			Success: false,
+			Message: "Invalid request body",
+		})
 		return
 	}
 
 	if err := h.db.UpdateOrderStatus(id, req.Status, req.PaymentStatus); err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to update order", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to update order",
+		})
 		return
 	}
 
 	order, err := h.db.GetOrdersByOption("id", &id)
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch updated order", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to fetch updated order",
+		})
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, order)
+	utils.SendResponse(c, utils.Response{
+		Status:  http.StatusOK,
+		Success: true,
+		Data:    order,
+	})
 }
 
 // GetAllUsers retrieves all users (admin only)
 func (h *AdminHandler) GetAllUsers(c *gin.Context) {
 	users, err := h.db.GetAllUsers()
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch users", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to fetch users",
+		})
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, users)
+	utils.SendResponse(c, utils.Response{
+		Status:  http.StatusOK,
+		Success: true,
+		Data:    users,
+	})
 }
 
 // UpdateUserRole updates a user's role (admin only)
@@ -154,7 +228,11 @@ func (h *AdminHandler) UpdateUserRole(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid request body", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusBadRequest,
+			Success: false,
+			Message: "Invalid request body",
+		})
 		return
 	}
 
@@ -163,24 +241,40 @@ func (h *AdminHandler) UpdateUserRole(c *gin.Context) {
 
 	// Prevent admin from demoting themselves
 	if userID == currentUserID && req.Role != "admin" {
-		utils.ErrorResponse(c, http.StatusBadRequest, "Cannot change your own role", nil)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusBadRequest,
+			Success: false,
+			Message: "Cannot change your own role",
+		})
 		return
 	}
 
 	// Update the role
 	if err := h.db.UpdateUserRole(userID, req.Role); err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to update user role", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to update user role",
+		})
 		return
 	}
 
 	// Fetch updated user
 	user, err := h.db.GetUserByID(userID)
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch updated user", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to fetch updated user",
+		})
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, user)
+	utils.SendResponse(c, utils.Response{
+		Status:  http.StatusOK,
+		Success: true,
+		Data:    user,
+	})
 }
 
 // DeleteUser deletes a user account (admin only)
@@ -192,28 +286,48 @@ func (h *AdminHandler) DeleteUser(c *gin.Context) {
 
 	// Prevent admin from deleting themselves
 	if userID == currentUserID {
-		utils.ErrorResponse(c, http.StatusBadRequest, "Cannot delete your own account", nil)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusBadRequest,
+			Success: false,
+			Message: "Cannot delete your own account",
+		})
 		return
 	}
 
 	// Delete the user
 	if err := h.db.DeleteUser(userID); err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete user", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to delete user",
+		})
 		return
 	}
 
-	utils.MessageResponse(c, http.StatusOK, "User deleted successfully")
+	utils.SendResponse(c, utils.Response{
+		Status:  http.StatusOK,
+		Success: true,
+		Message: "User deleted successfully",
+	})
 }
 
 // Setup status check
 func (h *AdminHandler) GetSetupStatus(c *gin.Context) {
 	setupStatus, err := h.db.GetSetupStatus()
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to get setup status", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to get setup status",
+		})
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, setupStatus)
+	utils.SendResponse(c, utils.Response{
+		Status:  http.StatusOK,
+		Success: true,
+		Data:    setupStatus,
+	})
 }
 
 // Create admin
@@ -221,12 +335,20 @@ func (h *AdminHandler) CreateInitialAdmin(c *gin.Context) {
 	// First check if any users exist
 	setupStatus, err := h.db.GetSetupStatus()
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to get setup status", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to get setup status",
+		})
 		return
 	}
 
 	if setupStatus.SetupComplete {
-		utils.ErrorResponse(c, http.StatusForbidden, "Setup already complete", nil)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusForbidden,
+			Success: false,
+			Message: "Setup already complete",
+		})
 		return
 	}
 
@@ -239,14 +361,22 @@ func (h *AdminHandler) CreateInitialAdmin(c *gin.Context) {
 	}
 
 	if err := json.NewDecoder(c.Request.Body).Decode(&req); err != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid request", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusBadRequest,
+			Success: false,
+			Message: "Invalid request",
+		})
 		return
 	}
 
 	// Hash password and create user with role = "admin"
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to process password", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to process password",
+		})
 		return
 	}
 
@@ -264,10 +394,18 @@ func (h *AdminHandler) CreateInitialAdmin(c *gin.Context) {
 	admin, err := h.db.CreateUser(&userRequest)
 	if err != nil {
 		if strings.Contains(err.Error(), "already exists") {
-			utils.ErrorResponse(c, http.StatusConflict, "Email already registered", err)
+			utils.SendResponse(c, utils.Response{
+				Status:  http.StatusConflict,
+				Success: false,
+				Message: "Email already registered",
+			})
 			return
 		}
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to create admin", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to create admin",
+		})
 		return
 	}
 
@@ -282,19 +420,31 @@ func (h *AdminHandler) CreateInitialAdmin(c *gin.Context) {
 
 	tokenString, err := token.SignedString([]byte(h.jwtSecret))
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to generate token", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to generate token",
+		})
 		return
 	}
-	utils.SuccessResponse(c, http.StatusCreated, gin.H{
-		"admin": admin,
-		"token": tokenString,
+	utils.SendResponse(c, utils.Response{
+		Status:  http.StatusCreated,
+		Success: true,
+		Data: gin.H{
+			"admin": admin,
+			"token": tokenString,
+		},
 	})
 }
 
 func (h *AdminHandler) UploadImage(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
-		utils.ErrorResponse(c, http.StatusUnauthorized, "User not authenticated", nil)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusUnauthorized,
+			Success: false,
+			Message: "User not authenticated",
+		})
 		return
 	}
 
@@ -305,24 +455,40 @@ func (h *AdminHandler) UploadImage(c *gin.Context) {
 	file, header, err := c.Request.FormFile("file") // Changed from "image" to match frontend
 	if err != nil {
 		if err == http.ErrMissingFile {
-			utils.ErrorResponse(c, http.StatusBadRequest, "No file uploaded or request Content-Type isn't multipart/form-data", err)
+			utils.SendResponse(c, utils.Response{
+				Status:  http.StatusBadRequest,
+				Success: false,
+				Message: "No file uploaded or request Content-Type isn't multipart/form-data",
+			})
 			return
 		}
-		utils.ErrorResponse(c, http.StatusBadRequest, "Failed to read file from form", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusBadRequest,
+			Success: false,
+			Message: "Failed to read file from form",
+		})
 		return
 	}
 	defer file.Close()
 
 	// Validate file size (max 2MB)
 	if header.Size > 2*1024*1024 {
-		utils.ErrorResponse(c, http.StatusBadRequest, "File size must be less than 2MB", nil)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusBadRequest,
+			Success: false,
+			Message: "File size must be less than 2MB",
+		})
 		return
 	}
 
 	// Validate file type (images only)
 	contentType := header.Header.Get("Content-Type")
 	if !strings.HasPrefix(contentType, "image/") {
-		utils.ErrorResponse(c, http.StatusBadRequest, "File must be an image", nil)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusBadRequest,
+			Success: false,
+			Message: "File must be an image",
+		})
 		return
 	}
 
@@ -333,12 +499,21 @@ func (h *AdminHandler) UploadImage(c *gin.Context) {
 	// Upload image to user-specific directory
 	imageURL, err := StoreFile(file, userIDStr, uniqueFilename)
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to upload image", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to upload image",
+		})
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusCreated, gin.H{
-		"url": imageURL,
+	utils.SendResponse(c, utils.Response{
+		Status:  http.StatusCreated,
+		Success: true,
+		Message: "Image uploaded successfully",
+		Data: gin.H{
+			"url": imageURL,
+		},
 	})
 }
 
@@ -400,7 +575,11 @@ func DeleteFile(userID, filename string) error {
 func (h *AdminHandler) DeleteImage(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
-		utils.ErrorResponse(c, http.StatusUnauthorized, "User not authenticated", nil)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusUnauthorized,
+			Success: false,
+			Message: "User not authenticated",
+		})
 		return
 	}
 	// Convert user_id to string
@@ -408,12 +587,18 @@ func (h *AdminHandler) DeleteImage(c *gin.Context) {
 	filename := c.Param("filename")
 
 	if err := DeleteFile(userIDStr, filename); err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete image", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to delete image",
+		})
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, gin.H{
-		"message": "Image deleted successfully",
+	utils.SendResponse(c, utils.Response{
+		Status:  http.StatusOK,
+		Success: true,
+		Message: "Image deleted successfully",
 	})
 }
 
@@ -423,17 +608,29 @@ func (h *AdminHandler) GetUserOrders(c *gin.Context) {
 	userIDStr := fmt.Sprintf("%v", userID)
 
 	if orders, err := h.db.GetOrdersByOption("user_id", &userIDStr); err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to get user orders", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to get user orders",
+		})
 		return
 	} else {
-		utils.SuccessResponse(c, http.StatusOK, orders)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusOK,
+			Success: true,
+			Data:    orders,
+		})
 	}
 }
 
 func (h *AdminHandler) UpdateUserPassword(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
-		utils.ErrorResponse(c, http.StatusUnauthorized, "User not authenticated", nil)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusUnauthorized,
+			Success: false,
+			Message: "User not authenticated",
+		})
 		return
 	}
 	// Convert user_id to string
@@ -444,36 +641,58 @@ func (h *AdminHandler) UpdateUserPassword(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid request body", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusBadRequest,
+			Success: false,
+			Message: "Invalid request body",
+		})
 		return
 	}
 
 	user, err := h.db.GetUserByID(userIDStr)
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to get user", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to get user",
+		})
 		return
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.CurrentPassword)); err != nil {
-		utils.ErrorResponse(c, http.StatusUnauthorized, "Invalid current password", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusUnauthorized,
+			Success: false,
+			Message: "Invalid current password",
+		})
 		return
 	}
 
 	newPasswordHash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to hash new password", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to hash new password",
+		})
 		return
 	}
 	newUser := user
 	newUser.Password = string(newPasswordHash)
 	err = h.db.UpdateUser(newUser)
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to update user", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to update user",
+		})
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, gin.H{
-		"message": "User password updated successfully",
+	utils.SendResponse(c, utils.Response{
+		Status:  http.StatusOK,
+		Success: true,
+		Message: "User password updated successfully",
 	})
 }
 
@@ -486,13 +705,21 @@ func (h *AdminHandler) UpdateUser(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid request body", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusBadRequest,
+			Success: false,
+			Message: "Invalid request body",
+		})
 		return
 	}
 
 	user, err := h.db.GetUserByID(req.Id)
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to get user", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to get user",
+		})
 		return
 	}
 
@@ -502,12 +729,18 @@ func (h *AdminHandler) UpdateUser(c *gin.Context) {
 	newUser.Email = req.Email
 	err = h.db.UpdateUser(newUser)
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to update user", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to update user",
+		})
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, gin.H{
-		"message": "User updated successfully",
+	utils.SendResponse(c, utils.Response{
+		Status:  http.StatusOK,
+		Success: true,
+		Message: "User updated successfully",
 	})
 }
 
@@ -515,18 +748,28 @@ func (h *AdminHandler) CreateCategory(c *gin.Context) {
 	var req models.Category
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid request body", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusBadRequest,
+			Success: false,
+			Message: "Invalid request body",
+		})
 		return
 	}
 
 	_, err := h.db.CreateCategory(&req)
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to create category", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to create category",
+		})
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusCreated, gin.H{
-		"message": "Category created successfully",
+	utils.SendResponse(c, utils.Response{
+		Status:  http.StatusCreated,
+		Success: true,
+		Message: "Category created successfully",
 	})
 }
 
@@ -535,13 +778,21 @@ func (h *AdminHandler) UpdateCategory(c *gin.Context) {
 	var req models.Category
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid request body", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusBadRequest,
+			Success: false,
+			Message: "Invalid request body",
+		})
 		return
 	}
 
 	category, err := h.db.GetCategoryBySlug(slug)
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to get category", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to get category",
+		})
 		return
 	}
 
@@ -552,12 +803,18 @@ func (h *AdminHandler) UpdateCategory(c *gin.Context) {
 
 	err = h.db.UpdateCategory(category)
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to update category", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to update category",
+		})
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, gin.H{
-		"message": "Category updated successfully",
+	utils.SendResponse(c, utils.Response{
+		Status:  http.StatusOK,
+		Success: true,
+		Message: "Category updated successfully",
 	})
 }
 
@@ -566,12 +823,18 @@ func (h *AdminHandler) DeleteCategory(c *gin.Context) {
 
 	err := h.db.DeleteCategory(idOrSlug)
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete category", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to delete category",
+		})
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, gin.H{
-		"message": "Category deleted successfully",
+	utils.SendResponse(c, utils.Response{
+		Status:  http.StatusOK,
+		Success: true,
+		Message: "Category deleted successfully",
 	})
 }
 
@@ -579,7 +842,11 @@ func (h *AdminHandler) UpdateWebsiteSetting(c *gin.Context) {
 	key := c.Param("key")
 	userID, exists := c.Get("user_id")
 	if !exists {
-		utils.ErrorResponse(c, http.StatusUnauthorized, "User not authenticated", nil)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusUnauthorized,
+			Success: false,
+			Message: "User not authenticated",
+		})
 		return
 	}
 
@@ -591,7 +858,11 @@ func (h *AdminHandler) UpdateWebsiteSetting(c *gin.Context) {
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		log.Println("Failed to bind JSON:", err)
-		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid request body", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusBadRequest,
+			Success: false,
+			Message: "Invalid request body",
+		})
 		return
 	}
 
@@ -670,15 +941,27 @@ func (h *AdminHandler) UpdateWebsiteSetting(c *gin.Context) {
 
 	// Update the database with the new value
 	if err := h.db.UpdateWebsiteSetting(key, req.Value); err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to update setting", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to update setting",
+		})
 		return
 	}
 
 	// Fetch the updated setting
 	config, err := h.db.GetWebsiteSettingByKey(key)
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch updated setting", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to fetch updated setting",
+		})
 		return
 	}
-	utils.SuccessResponse(c, http.StatusOK, config)
+	utils.SendResponse(c, utils.Response{
+		Status:  http.StatusOK,
+		Success: true,
+		Data:    config,
+	})
 }

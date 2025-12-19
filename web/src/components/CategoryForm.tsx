@@ -93,7 +93,7 @@ export function CategoryForm({ category, onSuccess }: CategoryFormProps) {
       const formDataUpload = new FormData();
       formDataUpload.append("file", file);
       const response = await api.uploadImage(formDataUpload);
-      return response.data.url;
+      return response.url;
     },
     onSuccess: (url) => {
       const fullUrl = url.startsWith("http") ? url : `${API_URL}${url}`;
@@ -121,7 +121,7 @@ export function CategoryForm({ category, onSuccess }: CategoryFormProps) {
         updated_at: null,
         created_at: null,
       });
-      return response.data;
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["categories"] });
@@ -147,7 +147,7 @@ export function CategoryForm({ category, onSuccess }: CategoryFormProps) {
         created_at: category.created_at,
         updated_at: null,
       });
-      return response.data;
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["categories"] });

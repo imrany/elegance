@@ -49,8 +49,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       try {
-        const { data } = await api.getMe();
-        setUser(data.user);
+        const { user } = await api.getMe();
+        setUser(user);
       } catch (error) {
         console.error("Failed to load user:", error);
         localStorage.removeItem("auth_token");
@@ -65,17 +65,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = async (email: string, password: string) => {
     try {
       const response = await api.signIn(email, password);
-      localStorage.setItem("auth_token", response.data.token);
-      setUser(response.data.user);
+      localStorage.setItem("auth_token", response.token);
+      setUser(response.user);
       return {};
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       return {
         error: {
-          message:
-            error?.response?.data?.error ||
-            error?.message ||
-            "Failed to sign in",
+          message: error?.error || error?.message || "Failed to sign in",
         },
       };
     }
@@ -96,10 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error: any) {
       return {
         error: {
-          message:
-            error?.response?.data?.error ||
-            error?.message ||
-            "Failed to create account",
+          message: error?.error || error?.message || "Failed to create account",
         },
       };
     }
@@ -118,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     phoneNumber: string,
   ) => {
     try {
-      const { data } = await api.setupAdmin(
+      const data = await api.setupAdmin(
         email,
         password,
         firstName,
@@ -134,9 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return {
         error: {
           message:
-            error?.response?.data?.error ||
-            error?.message ||
-            "Failed to create initial admin",
+            error?.error || error?.message || "Failed to create initial admin",
         },
       };
     }

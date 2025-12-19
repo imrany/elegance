@@ -49,7 +49,7 @@ export function CategoryGrid() {
 
         {mainCategories ? (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {mainCategories?.map((category, index) => (
+            {mainCategories.slice(0, 3).map((category, index) => (
               <CategoryCard
                 key={category.id}
                 category={category}

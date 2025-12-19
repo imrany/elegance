@@ -37,7 +37,9 @@ export function HeroSection() {
             {hero.title || store.name || "+ [Add Store Name]"}
             <br />
             <span className="font-semibold italic">
-              {hero.subtitle ? `${hero.subtitle.slice(0, 9)}...` : "Redefined"}
+              {hero.subtitle
+                ? `${hero.subtitle.split(" ")[0]}...`
+                : "Redefined"}
             </span>
           </h1>
 
@@ -80,7 +82,7 @@ export function HeroSection() {
       </div>
 
       {/* Scroll indicator */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2">
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
         <div className="flex flex-col items-center gap-2 text-primary-foreground/60">
           <span className="text-xs tracking-luxury uppercase">Scroll</span>
           <div className="h-12 w-px bg-primary-foreground/30" />

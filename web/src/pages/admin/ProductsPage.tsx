@@ -62,8 +62,7 @@ export default function ProductsPage() {
 
   const deleteProductMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { data: message } = await api.deleteProduct(id);
-      if (!message) throw new Error("Failed to delete product");
+      await api.deleteProduct(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-products"] });
@@ -76,8 +75,7 @@ export default function ProductsPage() {
 
   const deleteCategoryMutation = useMutation({
     mutationFn: async (key: string) => {
-      const { data: message } = await api.deleteCategory(key);
-      if (!message) throw new Error("Failed to delete category");
+      await api.deleteCategory(key);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["categories"] });

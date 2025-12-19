@@ -1,10 +1,19 @@
 export const API_URL = import.meta.env.DEV
-  ? "http://localhost:8080"
+  ? "http://localhost:8082"
   : window.location.origin;
 
-interface ApiError {
-  error: string;
+export interface ApiResponse<T> {
+  data: T;
+  message: string;
   status: number;
+  success: boolean;
+}
+
+export interface ApiError {
+  success: false;
+  message: string;
+  status: number;
+  error?: string; // Compatibility with your toast.error(error.error) logic
 }
 
 export interface HeroType {
@@ -291,21 +300,33 @@ class ApiClient {
       ...options.headers, // Any extra headers passed in by the caller
     };
 
-    const response = await fetch(`${this.baseURL}${endpoint}`, {
-      ...options,
-      headers: finalHeaders, // Use the final combined headers
-    });
+    try {
+      const response = await fetch(`${this.baseURL}${endpoint}`, {
+        ...options,
+        headers: finalHeaders, // Use the final combined headers
+      });
 
-    const data = await response.json();
+      const result: ApiResponse<T> = await response.json();
 
-    if (!response.ok) {
+      // If the server returned an error status or success: false
+      if (!response.ok || !result.success) {
+        throw {
+          success: false,
+          message: result.message || "An unexpected error occurred",
+          status: result.status || response.status,
+          error: result.message || "An unexpected error occurred",
+        };
+      }
+
+      return result.data;
+    } catch (error) {
       throw {
-        error: data.error || "Something went wrong",
-        status: response.status,
+        success: false,
+        message: error.message || "Something went wrong",
+        status: error.status,
+        error: error.message || "An unexpected error occurred",
       } as ApiError;
     }
-
-    return data;
   }
 
   // Auth endpoints
@@ -317,9 +338,7 @@ class ApiClient {
     phone_number: string,
   ) {
     return this.request<{
-      data: {
-        user: User;
-      };
+      user: User;
     }>("/api/auth/signup", {
       method: "POST",
       body: JSON.stringify({
@@ -334,10 +353,8 @@ class ApiClient {
 
   async signIn(email: string, password: string) {
     return this.request<{
-      data: {
-        token: string;
-        user: User;
-      };
+      token: string;
+      user: User;
     }>("/api/auth/signin", {
       method: "POST",
       body: JSON.stringify({ email, password }),
@@ -346,9 +363,7 @@ class ApiClient {
 
   async getMe() {
     return this.request<{
-      data: {
-        user: User;
-      };
+      user: User;
     }>("/api/auth/me");
   }
 
@@ -359,7 +374,7 @@ class ApiClient {
     email: string;
     phone_number: string;
   }) {
-    return this.request<{ data: User }>(`/api/auth/me`, {
+    return this.request<User>(`/api/auth/me`, {
       method: "PUT",
       body: JSON.stringify(userData),
     });
@@ -369,7 +384,7 @@ class ApiClient {
     current_password: string;
     new_password: string;
   }) {
-    return this.request<{ data: User }>(`/api/auth/me/password`, {
+    return this.request<User>(`/api/auth/me/password`, {
       method: "PUT",
       body: JSON.stringify(data),
     });
@@ -381,39 +396,39 @@ class ApiClient {
     const queryString = params
       ? "?" + new URLSearchParams(params).toString()
       : "";
-    return this.request<{ data: Product[] }>(`/api/products${queryString}`);
+    return this.request<Product[]>(`/api/products${queryString}`);
   }
 
   async getProductBySlug(slug: string) {
-    return this.request<{ data: Product }>(`/api/products/${slug}`);
+    return this.request<Product>(`/api/products/${slug}`);
   }
 
   async getFeaturedProducts() {
-    return this.request<{ data: Product[] }>("/api/products?featured=true");
+    return this.request<Product[]>("/api/products?featured=true");
   }
 
   async getNewProducts() {
-    return this.request<{ data: Product[] }>("/api/products?is_new=true");
+    return this.request<Product[]>("/api/products?is_new=true");
   }
 
   // Categories
   async getCategories() {
-    return this.request<{ data: Category[] }>("/api/categories");
+    return this.request<Category[]>("/api/categories");
   }
 
   async getCategoryBySlug(slug: string) {
-    return this.request<{ data: Category }>(`/api/categories/${slug}`);
+    return this.request<Category>(`/api/categories/${slug}`);
   }
 
   async createCategory(categoryData: Category) {
-    return this.request<{ data: Category }>("/api/admin/categories", {
+    return this.request<Category>("/api/admin/categories", {
       method: "POST",
       body: JSON.stringify(categoryData),
     });
   }
 
   async updateCategory(categoryData: Category) {
-    return this.request<{ data: Category }>(
+    return this.request<Category>(
       `/api/admin/categories/${categoryData.slug}`,
       {
         method: "PUT",
@@ -423,14 +438,14 @@ class ApiClient {
   }
 
   async deleteCategory(key: string) {
-    return this.request<{ data: string }>(`/api/admin/categories/${key}`, {
+    return this.request<void>(`/api/admin/categories/${key}`, {
       method: "DELETE",
     });
   }
 
   // Orders
   async createOrder(orderData: Order) {
-    return this.request<{ data: Order }>("/api/orders", {
+    return this.request<Order>("/api/orders", {
       method: "POST",
       body: JSON.stringify(orderData),
     });
@@ -438,7 +453,7 @@ class ApiClient {
 
   // /api/orders?key=user_id&&value=123
   async getOrders(key?: string, value?: string) {
-    return this.request<{ data: Order[] }>(
+    return this.request<Order[]>(
       `/api/orders?key=${key || ""}&value=${value || ""}`,
     );
   }
@@ -450,21 +465,21 @@ class ApiClient {
       payment_status: string;
     },
   ) {
-    return this.request<{ data: Order }>(`/api/admin/orders/${id}/status`, {
+    return this.request<Order>(`/api/admin/orders/${id}/status`, {
       method: "PUT",
       body: JSON.stringify(orderStatus),
     });
   }
 
   async deleteOrder(id: string) {
-    return this.request<{ data: string }>(`/api/orders/${id}`, {
+    return this.request<void>(`/api/orders/${id}`, {
       method: "DELETE",
     });
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async updateOrder(order_id: string, updatedPayload: any) {
-    return this.request<{ data: Order }>(`/api/orders/${order_id}`, {
+    return this.request<Order>(`/api/orders/${order_id}`, {
       method: "PUT",
       body: JSON.stringify(updatedPayload),
     });
@@ -472,21 +487,20 @@ class ApiClient {
 
   // Products (admin)
   async createProduct(productData: Product) {
-    console.log("Creating product:", productData);
-    return this.request<{ data: Product }>("/api/admin/products", {
+    return this.request<Product>(`/api/admin/products`, {
       method: "POST",
       body: JSON.stringify(productData),
     });
   }
 
   async deleteProduct(id: string) {
-    return this.request<{ data: string }>(`/api/admin/products/${id}`, {
+    return this.request<void>(`/api/admin/products/${id}`, {
       method: "DELETE",
     });
   }
 
   async updateProduct(id: string, productData: Product) {
-    return this.request<{ data: Product }>(`/api/admin/products/${id}`, {
+    return this.request<Product>(`/api/admin/products/${id}`, {
       method: "PUT",
       body: JSON.stringify(productData),
     });
@@ -494,7 +508,7 @@ class ApiClient {
 
   // Admin: Get all orders
   async getAllOrders() {
-    return this.request<{ data: Order[] }>("/api/admin/orders");
+    return this.request<Order[]>("/api/admin/orders");
   }
 
   async updateUser(userData: {
@@ -504,7 +518,7 @@ class ApiClient {
     email: string;
     phone_number: string;
   }) {
-    return this.request<{ data: User }>(`/api/admin/users`, {
+    return this.request<User>(`/api/admin/users`, {
       method: "PUT",
       body: JSON.stringify(userData),
     });
@@ -514,22 +528,20 @@ class ApiClient {
     current_password: string;
     new_password: string;
   }) {
-    return this.request<{ data: User }>(`/api/admin/users/password`, {
+    return this.request<User>(`/api/admin/users/password`, {
       method: "PUT",
       body: JSON.stringify(data),
     });
   }
 
   async getUserOrders(userId: string) {
-    return this.request<{ data: Order[] }>(`/api/admin/users/${userId}/orders`);
+    return this.request<Order[]>(`/api/admin/users/${userId}/orders`);
   }
 
   // Admin: Upload logo
   async uploadImage(formData: FormData) {
     return this.request<{
-      data: {
-        url: string;
-      };
+      url: string;
     }>(`/api/admin/upload/image`, {
       method: "POST",
       body: formData,
@@ -537,25 +549,25 @@ class ApiClient {
   }
 
   async deleteImage(filename: string) {
-    return this.request<{ data: string }>(`/api/admin/images/${filename}`, {
+    return this.request<void>(`/api/admin/images/${filename}`, {
       method: "DELETE",
     });
   }
 
   // Admin: User management
   async getAllUsers() {
-    return this.request<{ data: User[] }>("/api/admin/users");
+    return this.request<User[]>("/api/admin/users");
   }
 
   async updateUserRole(userId: string, role: string) {
-    return this.request<{ data: User }>(`/api/admin/users/${userId}/role`, {
+    return this.request<User>(`/api/admin/users/${userId}/role`, {
       method: "PUT",
       body: JSON.stringify({ role }),
     });
   }
 
   async deleteUser(userId: string) {
-    return this.request<{ data: string }>(`/api/admin/users/${userId}`, {
+    return this.request<void>(`/api/admin/users/${userId}`, {
       method: "DELETE",
     });
   }
@@ -563,20 +575,20 @@ class ApiClient {
   // Website Builder
   async getAllWebsiteConfig() {
     const url = `/api/website-builder`;
-    return this.request<{ data: WebsiteConfig[] }>(url, {
+    return this.request<WebsiteConfig[]>(url, {
       method: "GET",
     });
   }
 
   async getWebsiteConfig(key: string) {
     const url = `/api/website-builder/${key}`;
-    return this.request<{ data: WebsiteConfig }>(url, {
+    return this.request<WebsiteConfig>(url, {
       method: "GET",
     });
   }
 
   async updateWebsiteConfig(key: string, value: string) {
-    return await this.request<{ data: WebsiteConfig }>(
+    return await this.request<WebsiteConfig>(
       `/api/admin/website-builder/${key}`,
       {
         method: "PUT",
@@ -587,7 +599,7 @@ class ApiClient {
 
   // setup
   async getSetupStatus() {
-    return this.request<{ data: SetupStatus }>(`/api/setup/status`);
+    return this.request<SetupStatus>(`/api/setup/status`);
   }
 
   async setupAdmin(
@@ -597,19 +609,16 @@ class ApiClient {
     last_name: string,
     phone_number: string,
   ) {
-    return this.request<{ data: { admin: User; token: string } }>(
-      `/api/setup/admin`,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          email,
-          password,
-          first_name,
-          last_name,
-          phone_number,
-        }),
-      },
-    );
+    return this.request<{ admin: User; token: string }>(`/api/setup/admin`, {
+      method: "POST",
+      body: JSON.stringify({
+        email,
+        password,
+        first_name,
+        last_name,
+        phone_number,
+      }),
+    });
   }
 }
 

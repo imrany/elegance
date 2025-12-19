@@ -10,7 +10,7 @@ export function useProducts(
     queryKey: ["products", ...(queryKey || []), filters],
     queryFn: async () => {
       const response = await api.getProducts(filters);
-      return response.data;
+      return response;
     },
   });
 }
@@ -20,7 +20,7 @@ export function useProduct(slug: string, queryKey?: string[]) {
     queryKey: ["product", slug, ...(queryKey || [])],
     queryFn: async () => {
       const response = await api.getProductBySlug(slug);
-      return response.data;
+      return response;
     },
     enabled: !!slug,
   });

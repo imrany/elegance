@@ -15,7 +15,6 @@ import {
 import { Switch } from "./ui/switch";
 import { Button } from "./ui/button";
 import { Upload, X, Loader2, Image as ImageIcon } from "lucide-react";
-import { formatDate } from "date-fns";
 
 const CACHE_KEY = "product_form_draft";
 
@@ -142,7 +141,7 @@ export function ProductForm({
       const formDataUpload = new FormData();
       formDataUpload.append("file", file);
       const response = await api.uploadImage(formDataUpload);
-      return { url: response.data.url, index };
+      return { url: response.url, index };
     },
     onSuccess: (data) => {
       const url = data.url.startsWith("http")
@@ -199,12 +198,10 @@ export function ProductForm({
       };
 
       if (product) {
-        const { data: prod } = await api.updateProduct(product.id, data);
-        if (!prod) throw new Error("Failed to update product");
+        const prod = await api.updateProduct(product.id, data);
         return prod;
       } else {
-        const { data: newProduct } = await api.createProduct(data);
-        if (!newProduct) throw new Error("Failed to create product");
+        const newProduct = await api.createProduct(data);
         return newProduct;
       }
     },
@@ -214,7 +211,7 @@ export function ProductForm({
       clearCache(); // Clear cache on success
       onSuccess();
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast.error(error.message || "An error occurred");
     },
   });

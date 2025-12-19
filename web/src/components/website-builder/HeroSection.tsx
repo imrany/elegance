@@ -37,7 +37,7 @@ export function HeroSection({ data, onChange }: HeroSectionProps) {
       const formData = new FormData();
       formData.append("file", file);
       const response = await api.uploadImage(formData);
-      return response.data.url;
+      return response.url;
     },
     onSuccess: (url) => {
       const fullUrl = url.startsWith("http") ? url : `${API_URL}${url}`;

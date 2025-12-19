@@ -88,15 +88,14 @@ export default function OrdersPage() {
       ) {
         updatePayload.payment_status = "paid";
       }
-      const { data } = await api.updateOrder(id, updatePayload);
-      if (!data) throw new Error("Failed to update order status");
+      await api.updateOrder(id, updatePayload);
     },
     onSuccess: () => {
       getOrders();
       toast.success("Order status updated");
     },
-    onError: (error: Error) => {
-      toast.error(error.message);
+    onError: (error) => {
+      toast.error(error.message || "Failed to update order status");
     },
   });
 

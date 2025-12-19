@@ -47,7 +47,7 @@ const App = () => {
 
   const checkIfSetupNeeded = async () => {
     try {
-      const { data } = await api.getSetupStatus();
+      const data = await api.getSetupStatus();
       setSetupNeeded(!data.setup_complete);
     } catch (error) {
       console.error("Error checking setup status:", error);

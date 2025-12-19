@@ -17,9 +17,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import {
   Upload,
-  Facebook,
-  Instagram,
-  Twitter,
   Store,
   MessageCircle,
   Loader2,
@@ -73,7 +70,7 @@ export default function SettingsPage() {
       formData.append("file", file);
       // Assuming your API has an upload endpoint
       const response = await api.uploadImage(formData);
-      return response.data.url; // Adjust based on your API response
+      return response.url; // Adjust based on your API response
     },
     onSuccess: (path) => {
       setLogoPreview(path);

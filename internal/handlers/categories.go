@@ -12,10 +12,18 @@ import (
 func (h *Handler) GetCategories(c *gin.Context) {
 	categories, err := h.db.GetCategories()
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch categories", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Message: "Failed to fetch categories",
+			Success: false,
+		})
 		return
 	}
-	utils.SuccessResponse(c, http.StatusOK, categories)
+	utils.SendResponse(c, utils.Response{
+		Status:  http.StatusOK,
+		Success: true,
+		Data:    categories,
+	})
 }
 
 // GetCategoryBySlug handles GET /api/categories/:slug
@@ -25,12 +33,24 @@ func (h *Handler) GetCategoryBySlug(c *gin.Context) {
 	category, err := h.db.GetCategoryBySlug(slug)
 	if err != nil {
 		if err.Error() == "category not found" || err == sql.ErrNoRows {
-			utils.ErrorResponse(c, http.StatusNotFound, "Category not found", err)
+			utils.SendResponse(c, utils.Response{
+				Status:  http.StatusNotFound,
+				Message: "Category not found",
+				Success: false,
+			})
 			return
 		}
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch category", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Message: "Failed to fetch category",
+			Success: false,
+		})
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, category)
+	utils.SendResponse(c, utils.Response{
+		Status:  http.StatusOK,
+		Success: true,
+		Data:    category,
+	})
 }

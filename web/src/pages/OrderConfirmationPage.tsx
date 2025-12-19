@@ -44,7 +44,7 @@ export default function OrderConfirmationPage() {
   } = useQuery<Order>({
     queryKey: ["order", orderId],
     queryFn: async () => {
-      const { data: orders } = await api.getOrders("id", orderId!);
+      const orders = await api.getOrders("id", orderId!);
       return orders[0];
     },
     enabled: !!orderId,

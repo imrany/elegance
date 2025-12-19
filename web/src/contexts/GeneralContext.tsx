@@ -6,6 +6,7 @@ import {
   Category,
   WebsiteSettingKey,
   API_URL,
+  ApiError,
 } from "@/lib/api";
 import { DEFAULT_CONFIG } from "@/lib/utils";
 import {
@@ -34,7 +35,7 @@ interface GeneralContextType {
   websiteConfig: CombinedWebsiteConfig;
   categories: Category[];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  saveWebsiteConfig: UseMutationResult<any, Error, SaveConfigVars, unknown>;
+  saveWebsiteConfig: UseMutationResult<any, ApiError, SaveConfigVars, unknown>;
 }
 
 const GeneralContext = createContext<GeneralContextType | undefined>(undefined);
@@ -46,7 +47,7 @@ export function GeneralProvider({ children }: { children: ReactNode }) {
   const { data: configArray, isLoading } = useQuery<WebsiteConfig[]>({
     queryKey: ["website-config"],
     queryFn: async () => {
-      const { data } = await api.getAllWebsiteConfig();
+      const data = await api.getAllWebsiteConfig();
       return data;
     },
   });
@@ -55,7 +56,7 @@ export function GeneralProvider({ children }: { children: ReactNode }) {
     mutationFn: async ({ key, sectionData }: SaveConfigVars) => {
       const value = JSON.stringify(sectionData);
       const response = await api.updateWebsiteConfig(key, value);
-      return response.data;
+      return response;
     },
     // Optimistic UI Update: Updates the cache immediately before the server responds
     onMutate: async (newConfig) => {
@@ -74,12 +75,13 @@ export function GeneralProvider({ children }: { children: ReactNode }) {
       });
       return { previousConfig };
     },
-    onError: (error: Error, variables, context) => {
+    onError: (error: ApiError, variables, context) => {
       // Rollback on error
       if (context?.previousConfig) {
         queryClient.setQueryData(["website-config"], context.previousConfig);
       }
-      toast.error(error.message || "Failed to update website");
+
+      toast.error(error.error || "Failed to update website");
     },
     onSuccess: (_, variables) => {
       const sectionName =
@@ -183,7 +185,11 @@ export function GeneralProvider({ children }: { children: ReactNode }) {
 
   return (
     <GeneralContext.Provider
-      value={{ websiteConfig, categories, saveWebsiteConfig }}
+      value={{
+        websiteConfig,
+        categories,
+        saveWebsiteConfig,
+      }}
     >
       {children}
     </GeneralContext.Provider>

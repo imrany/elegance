@@ -83,14 +83,13 @@ export default function AccountPage() {
         email: data.email,
         phone_number: data.phoneNumber,
       });
-      return response.data;
+      return response;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["user"] });
       toast.success("Profile updated successfully");
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    onError: (error: any) => {
+    onError: (error) => {
       toast.error(error?.message || "Failed to update profile");
     },
   });
@@ -102,7 +101,7 @@ export default function AccountPage() {
         current_password: data.currentPassword,
         new_password: data.newPassword,
       });
-      return response.data;
+      return response;
     },
     onSuccess: () => {
       setShowPasswordSuccess(true);
@@ -116,8 +115,7 @@ export default function AccountPage() {
         setActiveTab("profile");
       }, 3000);
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    onError: (error: any) => {
+    onError: (error) => {
       toast.error(error?.message || "Failed to change password");
     },
   });

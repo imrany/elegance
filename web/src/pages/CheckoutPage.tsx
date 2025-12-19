@@ -13,7 +13,6 @@ import { toast } from "sonner";
 import {
   ArrowLeft,
   Loader2,
-  ShoppingBag,
   CreditCard,
   MapPin,
   User,
@@ -114,7 +113,7 @@ export default function CheckoutPage() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mutationFn: async (orderData: any) => {
       const response = await api.createOrder(orderData);
-      return response.data;
+      return response;
     },
     onSuccess: (data) => {
       toast.success("Order placed successfully!");

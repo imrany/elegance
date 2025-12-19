@@ -47,21 +47,33 @@ type SignInRequest struct {
 func (h *AuthHandler) SignUp(c *gin.Context) {
 	var req SignUpRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid request body", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusBadRequest,
+			Success: false,
+			Message: "Invalid request body",
+		})
 		return
 	}
 
 	// Check if user already exists
 	existingUser, _ := h.db.GetUserByEmail(req.Email)
 	if existingUser != nil {
-		utils.ErrorResponse(c, http.StatusConflict, "Email already registered", nil)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusConflict,
+			Success: false,
+			Message: "Email already registered",
+		})
 		return
 	}
 
 	// Hash password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to process password", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to process password",
+		})
 		return
 	}
 
@@ -80,15 +92,28 @@ func (h *AuthHandler) SignUp(c *gin.Context) {
 	user, err := h.db.CreateUser(&userRequest)
 	if err != nil {
 		if strings.Contains(err.Error(), "already exists") {
-			utils.ErrorResponse(c, http.StatusConflict, "Email already registered", err)
+			utils.SendResponse(c, utils.Response{
+				Status:  http.StatusConflict,
+				Success: false,
+				Message: "Email already registered",
+			})
 			return
 		}
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to create user", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to create user",
+		})
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusCreated, gin.H{
-		"user": user,
+	utils.SendResponse(c, utils.Response{
+		Status:  http.StatusCreated,
+		Success: true,
+		Message: "User created successfully",
+		Data: gin.H{
+			"user": user,
+		},
 	})
 }
 
@@ -96,20 +121,32 @@ func (h *AuthHandler) SignUp(c *gin.Context) {
 func (h *AuthHandler) SignIn(c *gin.Context) {
 	var req SignInRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid request body", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusBadRequest,
+			Success: false,
+			Message: "Invalid request body",
+		})
 		return
 	}
 
 	// Get user
 	user, err := h.db.GetUserByEmail(req.Email)
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusUnauthorized, "Invalid email or password", nil)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusUnauthorized,
+			Success: false,
+			Message: "Invalid email or password",
+		})
 		return
 	}
 
 	// Verify password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
-		utils.ErrorResponse(c, http.StatusUnauthorized, "Invalid email or password", nil)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusUnauthorized,
+			Success: false,
+			Message: "Invalid email or password",
+		})
 		return
 	}
 
@@ -124,13 +161,21 @@ func (h *AuthHandler) SignIn(c *gin.Context) {
 
 	tokenString, err := token.SignedString([]byte(h.jwtSecret))
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to generate token", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to generate token",
+		})
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, gin.H{
-		"token": tokenString,
-		"user":  user,
+	utils.SendResponse(c, utils.Response{
+		Status:  http.StatusOK,
+		Success: true,
+		Data: gin.H{
+			"token": tokenString,
+			"user":  user,
+		},
 	})
 }
 
@@ -140,12 +185,20 @@ func (h *AuthHandler) GetMe(c *gin.Context) {
 
 	user, err := h.db.GetUserByID(userID)
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusNotFound, "User not found", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusNotFound,
+			Success: false,
+			Message: "User not found",
+		})
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, gin.H{
-		"user": user,
+	utils.SendResponse(c, utils.Response{
+		Status:  http.StatusOK,
+		Success: true,
+		Data: gin.H{
+			"user": user,
+		},
 	})
 }
 
@@ -159,13 +212,21 @@ func (h *AuthHandler) UpdateUserAccount(c *gin.Context) {
 		PhoneNumber string `json:"phone_number"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid request body", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusBadRequest,
+			Success: false,
+			Message: "Invalid request body",
+		})
 		return
 	}
 
 	user, err := h.db.GetUserByID(req.ID)
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusNotFound, "User not found", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusNotFound,
+			Success: false,
+			Message: "User not found",
+		})
 		return
 	}
 
@@ -175,13 +236,21 @@ func (h *AuthHandler) UpdateUserAccount(c *gin.Context) {
 	user.PhoneNumber = req.PhoneNumber
 
 	if err := h.db.UpdateUser(user); err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to update user", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to update user",
+		})
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, gin.H{
-		"user":    user,
-		"message": "Account updated successfully",
+	utils.SendResponse(c, utils.Response{
+		Status:  http.StatusOK,
+		Success: true,
+		Data: gin.H{
+			"user":    user,
+			"message": "Account updated successfully",
+		},
 	})
 }
 
@@ -194,36 +263,60 @@ func (h *AuthHandler) ChangeUserPassword(c *gin.Context) {
 		NewPassword     string `json:"new_password"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid request body", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusBadRequest,
+			Success: false,
+			Message: "Invalid request body",
+		})
 		return
 	}
 
 	user, err := h.db.GetUserByID(userID)
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusNotFound, "User not found", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusNotFound,
+			Success: false,
+			Message: "User not found",
+		})
 		return
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.CurrentPassword)); err != nil {
-		utils.ErrorResponse(c, http.StatusUnauthorized, "Invalid current password", nil)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusUnauthorized,
+			Success: false,
+			Message: "Invalid current password",
+		})
 		return
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to hash password", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to hash password",
+		})
 		return
 	}
 
 	user.Password = string(hashedPassword)
 
 	if err := h.db.UpdateUser(user); err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to update user", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to update user",
+		})
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, gin.H{
-		"user":    user,
-		"message": "Password changed successfully",
+	utils.SendResponse(c, utils.Response{
+		Status:  http.StatusOK,
+		Success: true,
+		Data: gin.H{
+			"user":    user,
+			"message": "Password changed successfully",
+		},
 	})
 }

@@ -65,8 +65,8 @@ export default function SetupPage() {
 
   const checkIfSetupNeeded = async () => {
     try {
-      const { data } = await api.getSetupStatus();
-      if (data.setup_complete) {
+      const { setup_complete } = await api.getSetupStatus();
+      if (setup_complete) {
         navigate("/");
       }
     } catch (error) {

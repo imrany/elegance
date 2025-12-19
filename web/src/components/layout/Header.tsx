@@ -35,10 +35,13 @@ export function Header() {
   const { categories, websiteConfig } = useGeneralContext();
   const store = websiteConfig?.store;
   const navLinks = [
-    ...(categories?.map((category) => ({
-      name: category.name,
-      href: `/category/${category.slug}`,
-    })) || []),
+    ...(categories
+      ?.slice(0, 3)
+      .sort((a, b) => b.name.localeCompare(a.name))
+      .map((category) => ({
+        name: category.name,
+        href: `/category/${category.slug}`,
+      })) || []),
     { name: "New Arrivals", href: "/category/new-arrivals" },
   ];
 
@@ -48,7 +51,9 @@ export function Header() {
       <div className="bg-primary text-primary-foreground">
         {store.announcement && (
           <div className="container text-center flex h-8 items-center justify-center text-xs tracking-elegant">
-            {store.announcement}
+            {store.announcement.length > 45
+              ? store.announcement.slice(0, 44) + "..."
+              : store.announcement}
           </div>
         )}
       </div>

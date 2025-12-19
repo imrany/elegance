@@ -16,22 +16,32 @@ func (h *Handler) CreateOrder(c *gin.Context) {
 	var order models.Order
 
 	if err := c.ShouldBindJSON(&order); err != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid request body", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusBadRequest,
+			Success: false,
+			Message: "Invalid request body",
+		})
 		return
 	}
 
 	// Validate required fields
-	if err := validateOrder(&order); err != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
-		return
-	}
+	validateOrder(c, &order)
 
 	if err := h.db.CreateOrder(&order); err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to create order", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to create order",
+		})
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusCreated, order)
+	utils.SendResponse(c, utils.Response{
+		Status:  http.StatusCreated,
+		Success: true,
+		Message: "Order created successfully",
+		Data:    order,
+	})
 }
 
 // GetOrdersByUserID handles GET /api/order/user/?key=user_id&&value=123
@@ -46,27 +56,48 @@ func (h *Handler) GetOrdersByOption(c *gin.Context) {
 
 	userID, exists := c.Get("user_id")
 	if !exists {
-		utils.ErrorResponse(c, http.StatusUnauthorized, "User not authenticated", nil)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusUnauthorized,
+			Success: false,
+			Message: "User not authenticated",
+		})
 		return
 	}
 	userIDStr := fmt.Sprintf("%v", userID)
 	_, err := h.db.GetUserByID(userIDStr)
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch user", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to fetch user",
+		})
 		return
 	}
 
 	orders, err := h.db.GetOrdersByOption(key, val)
 	if err != nil {
 		if err.Error() == "user not found" || err == sql.ErrNoRows {
-			utils.ErrorResponse(c, http.StatusNotFound, "User not found", err)
+			utils.SendResponse(c, utils.Response{
+				Status:  http.StatusNotFound,
+				Success: false,
+				Message: "User not found",
+			})
 			return
 		}
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch orders", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to fetch orders",
+		})
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, orders)
+	utils.SendResponse(c, utils.Response{
+		Status:  http.StatusOK,
+		Success: true,
+		Message: "Orders fetched successfully",
+		Data:    orders,
+	})
 }
 
 // UpdateOrder handles PUT /api/orders/:id
@@ -75,17 +106,21 @@ func (h *Handler) UpdateOrder(c *gin.Context) {
 
 	var updatedPayload models.Order
 	if err := c.ShouldBindJSON(&updatedPayload); err != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid request body", err)
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusBadRequest,
+			Success: false,
+			Message: "Invalid request body",
+		})
 		return
 	}
 
 	orders, err := h.db.GetOrdersByOption("id", &order_id)
 	if err != nil {
 		if err.Error() == "order not found" || err == sql.ErrNoRows {
-			utils.ErrorResponse(c, http.StatusNotFound, "Order not found", err)
+			utils.SendResponse(c, utils.Response{Status: http.StatusNotFound, Message: "Order not found", Success: false})
 			return
 		}
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch order", err)
+		utils.SendResponse(c, utils.Response{Status: http.StatusInternalServerError, Message: "Failed to fetch order", Success: false})
 		return
 	}
 
@@ -98,14 +133,14 @@ func (h *Handler) UpdateOrder(c *gin.Context) {
 
 	if err := h.db.UpdateOrder(&order); err != nil {
 		if err.Error() == "order not found" || err == sql.ErrNoRows {
-			utils.ErrorResponse(c, http.StatusNotFound, "Order not found", err)
+			utils.SendResponse(c, utils.Response{Status: http.StatusNotFound, Message: "Order not found", Success: false})
 			return
 		}
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to update order", err)
+		utils.SendResponse(c, utils.Response{Status: http.StatusInternalServerError, Message: "Failed to update order", Success: false})
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, order)
+	utils.SendResponse(c, utils.Response{Status: http.StatusOK, Data: order, Success: true})
 }
 
 // DeleteOrder handles DELETE /api/orders/:id
@@ -114,41 +149,40 @@ func (h *Handler) DeleteOrder(c *gin.Context) {
 
 	if err := h.db.DeleteOrder(id); err != nil {
 		if err.Error() == "order not found" || err == sql.ErrNoRows {
-			utils.ErrorResponse(c, http.StatusNotFound, "Order not found", err)
+			utils.SendResponse(c, utils.Response{Status: http.StatusNotFound, Message: "Order not found", Success: false})
 			return
 		}
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete order", err)
+		utils.SendResponse(c, utils.Response{Status: http.StatusInternalServerError, Message: "Failed to delete order", Success: false})
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusNoContent, nil)
+	utils.SendResponse(c, utils.Response{Status: http.StatusNoContent, Success: true, Message: "Order deleted successfully"})
 }
 
 // validateOrder validates order fields
-func validateOrder(order *models.Order) error {
+func validateOrder(c *gin.Context, order *models.Order) {
 	if strings.TrimSpace(order.Customer.FirstName) == "" {
-		return utils.ErrMissingField("first_name")
+		utils.SendResponse(c, utils.Response{Status: http.StatusUnprocessableEntity, Message: "First name is required", Success: false})
 	}
 	if strings.TrimSpace(order.Customer.LastName) == "" {
-		return utils.ErrMissingField("last_name")
+		utils.SendResponse(c, utils.Response{Status: http.StatusUnprocessableEntity, Message: "Last name is required", Success: false})
 	}
 	if strings.TrimSpace(order.Customer.Email) == "" {
-		return utils.ErrMissingField("email")
+		utils.SendResponse(c, utils.Response{Status: http.StatusUnprocessableEntity, Message: "Email is required", Success: false})
 	}
 	if strings.TrimSpace(order.Customer.PhoneNumber) == "" {
-		return utils.ErrMissingField("phone_number")
+		utils.SendResponse(c, utils.Response{Status: http.StatusUnprocessableEntity, Message: "Phone number is required", Success: false})
 	}
 	if strings.TrimSpace(order.Shipping.Address) == "" {
-		return utils.ErrMissingField("address")
+		utils.SendResponse(c, utils.Response{Status: http.StatusUnprocessableEntity, Message: "Address is required", Success: false})
 	}
 	if order.Subtotal <= 0 {
-		return utils.ErrInvalidField("subtotal", "must be greater than 0")
+		utils.SendResponse(c, utils.Response{Status: http.StatusUnprocessableEntity, Message: "Subtotal must be greater than 0", Success: false})
 	}
 	if order.Total <= 0 {
-		return utils.ErrInvalidField("total", "must be greater than 0")
+		utils.SendResponse(c, utils.Response{Status: http.StatusUnprocessableEntity, Message: "Total must be greater than 0", Success: false})
 	}
 	if len(order.Items) == 0 {
-		return utils.ErrMissingField("items")
+		utils.SendResponse(c, utils.Response{Status: http.StatusUnprocessableEntity, Message: "Items are required", Success: false})
 	}
-	return nil
 }

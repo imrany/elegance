@@ -50,7 +50,7 @@ export default function WebsiteBuilder() {
     queryKey: ["website-config", activeTab],
     queryFn: async () => {
       const response = await api.getWebsiteConfig(activeTab);
-      return response.data;
+      return response;
     },
   });
 
@@ -93,7 +93,7 @@ export default function WebsiteBuilder() {
       const sectionData = localConfig[activeTab as keyof SectionData];
       const value = JSON.stringify(sectionData);
       const response = await api.updateWebsiteConfig(activeTab, value);
-      return response.data;
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({

@@ -38,7 +38,7 @@ export function SEOSettings({ data, onChange }: SEOSettingsProps) {
       const formData = new FormData();
       formData.append("file", file);
       const response = await api.uploadImage(formData);
-      return { url: response.data.url, type };
+      return { url: response.url, type };
     },
     onSuccess: ({ url, type }) => {
       const fullUrl = url.startsWith("http") ? url : `${API_URL}${url}`;
