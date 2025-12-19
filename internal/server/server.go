@@ -12,9 +12,9 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/imrany/ecommerce/internal/database"
-	"github.com/imrany/ecommerce/internal/handlers"
-	"github.com/imrany/ecommerce/internal/middleware"
+	"github.com/imrany/elegance/internal/database"
+	"github.com/imrany/elegance/internal/handlers"
+	"github.com/imrany/elegance/internal/middleware"
 )
 
 //go:embed dist/*
@@ -253,7 +253,7 @@ func (s *Server) handleHealth(c *gin.Context) {
 		"status":    "ok",
 		"timestamp": time.Now().Unix(),
 		"database":  s.config.DBType,
-		"version":   "1.0.0",
+		"version":   "0.1.0",
 	})
 }
 
@@ -271,7 +271,7 @@ func (s *Server) handleRoot(c *gin.Context) {
 			"auth":            "POST /api/auth/signup, POST /api/auth/signin",
 			"website-builder": "GET /api/website-builder, GET /api/website-builder/:key",
 		},
-		"documentation": "https://github.com/imrany/ELEGANCE",
+		"documentation": "https://github.com/imrany/elegance",
 	})
 }
 

@@ -1,6 +1,6 @@
-# 🚀 Go E-Commerce Backend
+# 🚀 Elegance 
 
-A high-performance Go backend for luxury fashion e-commerce with support for PostgreSQL and SQLite databases.
+Elegance is an elegance theme program that provides a user-friendly interface for managing products, orders, and customers. It is built using Go and is designed to be scalable and efficient.
 
 ---
 
@@ -31,8 +31,8 @@ go version
 ### 2. **Create Project Structure**
 
 ```bash
-mkdir ecommerce-backend
-cd ecommerce-backend
+mkdir elegance
+cd elegance
 
 # Create necessary directories
 mkdir -p migrations cmd/server
@@ -41,7 +41,7 @@ mkdir -p migrations cmd/server
 ### 3. **Initialize Go Module**
 
 ```bash
-go mod init github.com/yourusername/ecommerce-backend
+go mod init github.com/yourusername/elegance
 ```
 
 ### 4. **Install Dependencies**
@@ -64,7 +64,7 @@ go get github.com/google/uuid
 ## 📁 Project Structure
 
 ```
-ecommerce-backend/
+elegance/
 ├── main.go                          # Main application file
 ├── go.mod                           # Go module file
 ├── go.sum                           # Dependencies checksum
@@ -86,9 +86,9 @@ Create a `.env` file:
 ```bash
 # Database Configuration
 DB_TYPE=postgres               # or sqlite
-DATABASE_URL=postgres://user:password@localhost:5432/ecommerce?sslmode=disable
+DATABASE_URL=postgres://user:password@localhost:5432/elegance?sslmode=disable
 # Or for SQLite:
-# DATABASE_URL=./ecommerce.db
+# DATABASE_URL=./elegance.db
 
 # Server Configuration
 PORT=8080
@@ -97,8 +97,8 @@ PORT=8080
 ### **Or Use Command-Line Flags**
 
 ```bash
-./ecommerce-backend --db-type=postgres --db-dsn="postgres://..." -port=8080
-./ecommerce-backend --db-type=sqlite --db-dsn="./ecommerce.db" -port=8080
+./elegance --db-type=postgres --db-dsn="postgres://..." -port=8080
+./elegance --db-type=sqlite --db-dsn="./elegance.db" -port=8080
 ```
 
 ---
@@ -119,22 +119,22 @@ sudo apt install postgresql postgresql-contrib
 ```bash
 sudo -u postgres psql
 
-CREATE DATABASE ecommerce;
-CREATE USER ecommerce_user WITH PASSWORD 'your_password';
-GRANT ALL PRIVILEGES ON DATABASE ecommerce TO ecommerce_user;
+CREATE DATABASE elegance;
+CREATE USER elegance_user WITH PASSWORD 'your_password';
+GRANT ALL PRIVILEGES ON DATABASE elegance TO elegance_user;
 \q
 ```
 
 #### Run Migrations:
 
 ```bash
-psql -U ecommerce_user -d ecommerce -f migrations/001_create_tables.up.sql
+psql -U elegance_user -d elegance -f migrations/001_create_tables.up.sql
 ```
 
 #### Connection String:
 
 ```
-postgres://ecommerce_user:your_password@localhost:5432/ecommerce?sslmode=disable
+postgres://elegance_user:your_password@localhost:5432/elegance?sslmode=disable
 ```
 
 ### **Option 2: SQLite** (Development)
@@ -144,7 +144,7 @@ No installation needed! SQLite file is created automatically.
 #### Run Migrations:
 
 ```bash
-sqlite3 ecommerce.db < migrations/001_create_tables_sqlite.up.sql
+sqlite3 elegance.db < migrations/001_create_tables_sqlite.up.sql
 ```
 
 ---
@@ -155,16 +155,16 @@ sqlite3 ecommerce.db < migrations/001_create_tables_sqlite.up.sql
 
 ```bash
 # Build
-go build -o ecommerce-backend main.go
+go build -o elegance main.go
 
 # Run with environment variables
 export DB_TYPE=postgres
-export DATABASE_URL="postgres://user:pass@localhost:5432/ecommerce?sslmode=disable"
+export DATABASE_URL="postgres://user:pass@localhost:5432/elegance?sslmode=disable"
 export PORT=8080
-./ecommerce-backend
+./elegance
 
 # Or run with flags
-./ecommerce-backend --db-type=postgres --db-dsn="postgres://..." -port=8080
+./elegance --db-type=postgres --db-dsn="postgres://..." -port=8080
 ```
 
 ### **Development Mode** (auto-reload)
@@ -181,10 +181,10 @@ air
 
 ```bash
 # Run migrations
-sqlite3 ecommerce.db < migrations/001_create_tables_sqlite.up.sql
+sqlite3 elegance.db < migrations/001_create_tables_sqlite.up.sql
 
 # Run server
-go run main.go --db-type=sqlite --db-dsn=./ecommerce.db
+go run main.go --db-type=sqlite --db-dsn=./elegance.db
 ```
 
 ---
@@ -358,17 +358,17 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN go build -o ecommerce-backend main.go
+RUN go build -o elegance main.go
 
 FROM alpine:latest
 RUN apk --no-cache add ca-certificates
 WORKDIR /root/
 
-COPY --from=builder /app/ecommerce-backend .
+COPY --from=builder /app/elegance .
 COPY --from=builder /app/migrations ./migrations
 
 EXPOSE 8080
-CMD ["./ecommerce-backend"]
+CMD ["./elegance"]
 ```
 
 ### **docker-compose.yml**
@@ -380,8 +380,8 @@ services:
   postgres:
     image: postgres:15-alpine
     environment:
-      POSTGRES_DB: ecommerce
-      POSTGRES_USER: ecommerce_user
+      POSTGRES_DB: elegance
+    POSTGRES_USER: elegance_user
       POSTGRES_PASSWORD: your_password
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -393,7 +393,7 @@ services:
     build: .
     environment:
       DB_TYPE: postgres
-      DATABASE_URL: postgres://ecommerce_user:your_password@postgres:5432/ecommerce?sslmode=disable
+      DATABASE_URL: postgres://elegance_user:your_password@postgres:5432/elegance?sslmode=disable
       PORT: 8080
     ports:
       - "8080:8080"
@@ -473,17 +473,17 @@ go get github.com/golang-jwt/jwt/v5
 
 ```bash
 # 1. Copy files to server
-scp -r * user@server:/opt/ecommerce-backend
+scp -r * user@server:/opt/elegance
 
 # 2. SSH into server
 ssh user@server
 
 # 3. Build
-cd /opt/ecommerce-backend
-go build -o ecommerce-backend main.go
+cd /opt/elegance
+go build -o elegance main.go
 
 # 4. Create systemd service
-sudo nano /etc/systemd/system/ecommerce.service
+sudo nano /etc/systemd/system/elegance.service
 ```
 
 **Service file:**
@@ -495,11 +495,11 @@ After=network.target
 [Service]
 Type=simple
 User=www-data
-WorkingDirectory=/opt/ecommerce-backend
+WorkingDirectory=/opt/elegance
 Environment="DB_TYPE=postgres"
 Environment="DATABASE_URL=postgres://..."
 Environment="PORT=8080"
-ExecStart=/opt/ecommerce-backend/ecommerce-backend
+ExecStart=/opt/elegance/elegance
 Restart=always
 
 [Install]
@@ -508,9 +508,9 @@ WantedBy=multi-user.target
 
 ```bash
 # 5. Enable and start service
-sudo systemctl enable ecommerce
-sudo systemctl start ecommerce
-sudo systemctl status ecommerce
+sudo systemctl enable elegance
+sudo systemctl start elegance
+sudo systemctl status elegance
 ```
 
 ---
@@ -531,7 +531,7 @@ sudo kill -9 <PID>
 
 ```bash
 # Test PostgreSQL connection
-psql -U user -d ecommerce -h localhost
+psql -U user -d elegance -h localhost
 
 # Check if PostgreSQL is running
 sudo systemctl status postgresql
@@ -541,8 +541,8 @@ sudo systemctl status postgresql
 
 ```bash
 # Close all connections and restart
-rm ecommerce.db
-sqlite3 ecommerce.db < migrations/001_create_tables_sqlite.up.sql
+rm elegance.db
+sqlite3 elegance.db < migrations/001_create_tables_sqlite.up.sql
 ```
 
 ---

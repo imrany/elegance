@@ -1,6 +1,6 @@
 package handlers
 
-import "github.com/imrany/ecommerce/internal/database"
+import "github.com/imrany/elegance/internal/database"
 
 // Handler holds dependencies for all handlers
 type Handler struct {

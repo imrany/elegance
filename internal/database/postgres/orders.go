@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/imrany/ecommerce/internal/models"
+	"github.com/imrany/elegance/internal/models"
 )
 
 // CreateOrder creates a new order with nested customer and shipping information

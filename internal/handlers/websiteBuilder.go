@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/imrany/ecommerce/pkg/utils"
+	"github.com/imrany/elegance/pkg/utils"
 )
 
 // GetAllWebsiteConfig handles GET /api/website-builder

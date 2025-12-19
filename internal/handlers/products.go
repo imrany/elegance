@@ -6,8 +6,8 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/imrany/ecommerce/internal/models"
-	"github.com/imrany/ecommerce/pkg/utils"
+	"github.com/imrany/elegance/internal/models"
+	"github.com/imrany/elegance/pkg/utils"
 )
 
 // GetProducts handles GET /api/products

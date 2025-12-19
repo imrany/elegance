@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/imrany/ecommerce/pkg/utils"
+	"github.com/imrany/elegance/pkg/utils"
 )
 
 // GetCategories handles GET /api/categories

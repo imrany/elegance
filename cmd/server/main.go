@@ -8,9 +8,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/imrany/ecommerce/internal/database"
-	"github.com/imrany/ecommerce/internal/migrator"
-	"github.com/imrany/ecommerce/internal/server"
+	"github.com/imrany/elegance/internal/database"
+	"github.com/imrany/elegance/internal/migrator"
+	"github.com/imrany/elegance/internal/server"
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -37,13 +37,13 @@ func runServer() {
 			Host: viper.GetString("host"),
 		},
 		JWTSecret: viper.GetString("jwt-secret"),
+		DBType:    viper.GetString("db-type"),
 	}
 
-	DBType := viper.GetString("db-type")
 	DBDSN := viper.GetString("db-dsn")
 
 	// Validate configuration
-	if DBType == "" {
+	if cfg.DBType == "" {
 		log.Fatal("Database type (db-type) is required")
 	}
 	if DBDSN == "" {
@@ -53,14 +53,14 @@ func runServer() {
 	log.Println("Connecting to database...")
 
 	// Initialize database connection for migrations
-	sqlDB, err := openDatabase(DBType, DBDSN)
+	sqlDB, err := openDatabase(cfg.DBType, DBDSN)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
 	// Run migrations automatically
 	log.Println("Running database migrations...")
-	m, err := migrator.New(sqlDB, DBType)
+	m, err := migrator.New(sqlDB, cfg.DBType)
 	if err != nil {
 		sqlDB.Close()
 		log.Fatalf("Failed to create migrator: %v", err)
@@ -77,13 +77,13 @@ func runServer() {
 
 	// Now initialize the application database layer
 	log.Println("Initializing application database layer...")
-	db, err := database.New(DBType, DBDSN)
+	db, err := database.New(cfg.DBType, DBDSN)
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 	defer db.Close()
 
-	log.Printf("Connected to %s database successfully", DBType)
+	log.Printf("Connected to %s database successfully", cfg.DBType)
 
 	// Create and start server
 	srv := server.New(cfg, db)
@@ -100,7 +100,7 @@ func runServer() {
 	}()
 
 	// Start server
-	log.Printf("🚀 Server starting on %s:%d", cfg.Server.Host, cfg.Server.Port)
+	log.Printf("🚀 Server starting on http://%s:%d", cfg.Server.Host, cfg.Server.Port)
 	if err := srv.Start(); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
@@ -116,10 +116,9 @@ func main() {
 
 	// Root command with Cobra
 	rootCmd := &cobra.Command{
-		Use:   "ecommerce",
-		Short: "E-commerce backend server with automatic migrations",
-		Long: `E-commerce backend API server with automatic database migrations.
-Supports PostgreSQL and SQLite databases.`,
+		Use:   "Elegance",
+		Short: "Elegance is an ecommerce theme program",
+		Long:  `Elegance is an ecommerce theme program that provides a user-friendly interface for managing products, orders, and customers. It is built using Go and is designed to be scalable and efficient.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			runServer()
 		},
@@ -140,7 +139,7 @@ Supports PostgreSQL and SQLite databases.`,
 	rootCmd.PersistentFlags().String("host", "localhost", "Host to listen on (e.g., localhost, 0.0.0.0)")
 	rootCmd.PersistentFlags().String("jwt-secret", "secret", "JWT secret key for authentication")
 	rootCmd.PersistentFlags().String("db-type", "sqlite3", "Database type (sqlite3 or postgres)")
-	rootCmd.PersistentFlags().String("db-dsn", "./ecommerce.db", "Database DSN/connection string")
+	rootCmd.PersistentFlags().String("db-dsn", "./elegance.db", "Database DSN/connection string")
 	rootCmd.PersistentFlags().String("upload-dir", "./uploads", "Upload directory")
 
 	// Bind flags to viper and environment variables

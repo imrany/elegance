@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/imrany/ecommerce/internal/models"
+	"github.com/imrany/elegance/internal/models"
 )
 
 func (sq *SQLiteDB) SetupAdmin(user *models.User) (*models.User, error) {

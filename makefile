@@ -4,7 +4,7 @@
 .DEFAULT_GOAL := help
 
 # Variables
-BINARY_NAME=ecommerce
+BINARY_NAME=elegance
 CMD_PATH=./cmd/server
 BUILD_DIR=./bin
 GO=go
@@ -84,43 +84,20 @@ clean:
 	@echo "Cleaning build artifacts..."
 	@rm -rf $(BUILD_DIR)
 	@rm -f coverage.out coverage.html
-	@rm -f ecommerce.db
+	@rm -f elegance.db
 	@echo "✓ Clean complete"
 
-## migrate-postgres: Run PostgreSQL migrations
-migrate-postgres:
-	@echo "Running PostgreSQL migrations..."
-	@if [ -z "$(DATABASE_URL)" ]; then \
-		echo "ERROR: DATABASE_URL environment variable not set"; \
-		exit 1; \
-	fi
-	psql $(DATABASE_URL) -f migrations/postgres/001_create_tables.sql
-	@echo "✓ PostgreSQL migrations complete"
-
-## migrate-sqlite: Run SQLite migrations
-migrate-sqlite:
-	@echo "Running SQLite migrations..."
-	@mkdir -p $(dir ecommerce.db)
-	sqlite3 ecommerce.db < migrations/sqlite/001_create_tables.sql
-	@echo "✓ SQLite migrations complete"
+## migrate: Run migrations
+migrate:
+	$(GO) run cmd/migrate/main.go --cmd=up
 
 ## docker-build: Build Docker image
 docker-build:
 	@echo "Building Docker image..."
-	docker build -t ecommerce-backend:latest .
+	docker build -t elegance:latest .
 	@echo "✓ Docker image built"
 
 ## docker-run: Run Docker container
 docker-run:
 	@echo "Running Docker container..."
-	docker run -p 8080:8080 --env-file .env ecommerce-backend:latest
-
-## build-all: Build for multiple platforms
-build-all:
-	@echo "Building for multiple platforms..."
-	@mkdir -p $(BUILD_DIR)
-	GOOS=linux GOARCH=amd64 $(GO) build -o $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64 $(CMD_PATH)/main.go
-	GOOS=darwin GOARCH=amd64 $(GO) build -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-amd64 $(CMD_PATH)/main.go
-	GOOS=darwin GOARCH=arm64 $(GO) build -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-arm64 $(CMD_PATH)/main.go
-	GOOS=windows GOARCH=amd64 $(GO) build -o $(BUILD_DIR)/$(BINARY_NAME)-windows-amd64.exe $(CMD_PATH)/main.go
-	@echo "✓ Multi-platform build complete"
+	docker run -p 8082:8082 --env-file .env elegance:latest

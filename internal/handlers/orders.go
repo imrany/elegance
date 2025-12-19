@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/imrany/ecommerce/internal/models"
-	"github.com/imrany/ecommerce/pkg/utils"
+	"github.com/imrany/elegance/internal/models"
+	"github.com/imrany/elegance/pkg/utils"
 )
 
 // CreateOrder handles POST /api/orders

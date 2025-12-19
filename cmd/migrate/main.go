@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/imrany/ecommerce/internal/migrator"
+	"github.com/imrany/elegance/internal/migrator"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/spf13/pflag"

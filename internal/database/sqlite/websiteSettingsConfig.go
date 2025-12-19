@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/imrany/ecommerce/internal/models"
+	"github.com/imrany/elegance/internal/models"
 )
 
 func (sq *SQLiteDB) GetWebsiteSettingByKey(key string) (models.WebsiteSetting, error) {

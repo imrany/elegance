@@ -1,4 +1,4 @@
-module github.com/imrany/ecommerce
+module github.com/imrany/elegance
 
 go 1.24.3
 

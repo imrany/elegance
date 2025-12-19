@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/imrany/ecommerce/internal/models"
+	"github.com/imrany/elegance/internal/models"
 )
 
 func (sq *SQLiteDB) GetProducts(filters models.ProductFilters) ([]models.Product, error) {

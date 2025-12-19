@@ -17,9 +17,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/imrany/ecommerce/internal/database"
-	"github.com/imrany/ecommerce/internal/models"
-	"github.com/imrany/ecommerce/pkg/utils"
+	"github.com/imrany/elegance/internal/database"
+	"github.com/imrany/elegance/internal/models"
+	"github.com/imrany/elegance/pkg/utils"
 	"github.com/spf13/viper"
 	"golang.org/x/crypto/bcrypt"
 )

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/imrany/ecommerce/internal/models"
+	"github.com/imrany/elegance/internal/models"
 )
 
 // CreateUser creates a new user

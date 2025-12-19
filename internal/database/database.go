@@ -3,9 +3,9 @@ package database
 import (
 	"fmt"
 
-	"github.com/imrany/ecommerce/internal/database/postgres"
-	"github.com/imrany/ecommerce/internal/database/sqlite"
-	"github.com/imrany/ecommerce/internal/models"
+	"github.com/imrany/elegance/internal/database/postgres"
+	"github.com/imrany/elegance/internal/database/sqlite"
+	"github.com/imrany/elegance/internal/models"
 )
 
 // DB defines the database interface
