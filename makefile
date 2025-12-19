@@ -94,10 +94,10 @@ migrate:
 ## docker-build: Build Docker image
 docker-build:
 	@echo "Building Docker image..."
-	docker build -t elegance:latest .
+	docker build --network=host -t elegance:latest .
 	@echo "✓ Docker image built"
 
 ## docker-run: Run Docker container
 docker-run:
 	@echo "Running Docker container..."
-	docker run -p 8082:8082 --env-file .env elegance:latest
+	docker run -d --name elegance -p 8082:8082  -v  ./.elegance:/var/opt/elegance --env-file .env elegance:latest
