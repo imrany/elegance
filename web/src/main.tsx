@@ -26,9 +26,16 @@ import "@fontsource/montserrat/600.css";
 // Merriweather (Sophisticated Serif)
 import "@fontsource/merriweather/400.css";
 import "@fontsource/merriweather/700.css"; // Merriweather often uses 700 for semibold
+import { HelmetProvider } from "react-helmet-async";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
+const queryClient = new QueryClient();
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <App />
+    <HelmetProvider>
+      <QueryClientProvider client={queryClient}>
+        <App />
+      </QueryClientProvider>
+    </HelmetProvider>
   </React.StrictMode>,
 );

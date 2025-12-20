@@ -62,8 +62,7 @@ export default function OrdersAdminPage() {
   const { data: orders, isLoading } = useQuery({
     queryKey: ["admin-orders"],
     queryFn: async () => {
-      const { data } = await api.getAllOrders();
-      if (!data) throw new Error("Failed to fetch orders");
+      const data = await api.getAllOrders();
       return data;
     },
   });
@@ -89,29 +88,27 @@ export default function OrdersAdminPage() {
       ) {
         updatePayload.payment_status = "paid";
       }
-      const { data } = await api.updateOrderStatus(id, updatePayload);
-      if (!data) throw new Error("Failed to update order status");
+      await api.updateOrderStatus(id, updatePayload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
       toast.success("Order status updated");
     },
-    onError: (error: Error) => {
-      toast.error(error.message);
+    onError: (error) => {
+      toast.error(error.message || "Failed to update order status");
     },
   });
 
   const deleteOrderMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { data } = await api.deleteOrder(id);
-      if (!data) throw new Error("Failed to delete order");
+      await api.deleteOrder(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
       toast.success("Order deleted");
     },
-    onError: (error: Error) => {
-      toast.error(error.message);
+    onError: (error) => {
+      toast.error(error.message || "Failed to delete order");
     },
   });
 

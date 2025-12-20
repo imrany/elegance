@@ -98,6 +98,13 @@ func (s *Server) setupRoutes() {
 			websiteBuilder.GET("/:key", s.handler.GetWebsiteConfig)
 		}
 
+		// Pages endpoints (public)
+		pages := api.Group("/pages")
+		{
+			pages.GET("", s.handler.GetPages)
+			pages.GET("/:id", s.handler.GetPage)
+		}
+
 		// Auth endpoints (public)
 		authHandler := handlers.NewAuthHandler(s.db, s.config.JWTSecret)
 		auth := api.Group("/auth")
@@ -182,6 +189,14 @@ func (s *Server) setupRoutes() {
 			// Images management
 			admin.POST("/upload/image", adminHandler.UploadImage)
 			admin.DELETE("/images/:filename", adminHandler.DeleteImage)
+
+			admin.POST("/pages", s.handler.CreatePage)
+			admin.PUT("/pages/:id", s.handler.UpdatePage)
+			admin.DELETE("/pages/:id", s.handler.DeletePage)
+			admin.POST("/pages/:id/publish", s.handler.PublishPage)
+			admin.POST("/pages/:id/unpublish", s.handler.UnpublishPage)
+			admin.POST("/pages/:id/duplicate", s.handler.DuplicatePage)
+			admin.POST("/pages/:id/reorder-sections", s.handler.ReorderPageSections)
 		}
 	}
 
@@ -254,7 +269,7 @@ func (s *Server) handleHealth(c *gin.Context) {
 		"status":    "ok",
 		"timestamp": time.Now().Unix(),
 		"database":  s.config.DBType,
-		"version":   "0.2.1",
+		"version":   "0.3.0",
 	})
 }
 

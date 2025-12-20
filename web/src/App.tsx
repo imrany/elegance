@@ -1,7 +1,6 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { CartProvider } from "@/contexts/CartContext";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -34,8 +33,9 @@ import AboutUs from "./pages/AboutUs";
 import { ProductListingPage } from "./pages/ProductListingPage";
 import { FAQsPage } from "./pages/FAQsPage";
 import { GuidePage } from "./pages/GuidePage";
-
-const queryClient = new QueryClient();
+import PageBuilder from "./pages/admin/page-builder/PageBuilder";
+import PageEditor from "./pages/admin/page-builder/PageEditor";
+import PageRenderer from "./pages/admin/page-builder/PageRender";
 
 const App = () => {
   const [setupNeeded, setSetupNeeded] = useState<boolean | null>(null);
@@ -70,129 +70,140 @@ const App = () => {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <GeneralProvider>
-        <AuthProvider>
-          <CartProvider>
-            <OrderProvider>
-              <TooltipProvider>
-                <Toaster />
-                <Sonner closeButton={true} theme="light" />
-                <BrowserRouter>
-                  <Routes>
-                    {/* If setup is needed, redirect all routes to setup */}
-                    {setupNeeded ? (
-                      <>
-                        <Route path="/setup" element={<SetupPage />} />
-                        <Route
-                          path="*"
-                          element={<Navigate to="/setup" replace />}
-                        />
-                      </>
-                    ) : (
-                      <>
-                        {/* Setup complete - normal routes */}
-                        <Route
-                          path="/setup"
-                          element={<Navigate to="/" replace />}
-                        />
+    <GeneralProvider>
+      <AuthProvider>
+        <CartProvider>
+          <OrderProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner closeButton={true} theme="light" />
+              <BrowserRouter>
+                <Routes>
+                  {/* If setup is needed, redirect all routes to setup */}
+                  {setupNeeded ? (
+                    <>
+                      <Route path="/setup" element={<SetupPage />} />
+                      <Route
+                        path="*"
+                        element={<Navigate to="/setup" replace />}
+                      />
+                    </>
+                  ) : (
+                    <>
+                      {/* Setup complete - normal routes */}
+                      <Route
+                        path="/setup"
+                        element={<Navigate to="/" replace />}
+                      />
 
-                        {/* Public Routes */}
-                        <Route path="/" element={<Index />} />
-                        <Route path="/faqs" element={<FAQsPage />} />
-                        <Route path="/guide" element={<GuidePage />} />
-                        <Route path="/about-us" element={<AboutUs />} />
-                        <Route
-                          path="/products"
-                          element={<ProductListingPage />}
-                        />
-                        <Route
-                          path="/category/:slug"
-                          element={<CategoryPage />}
-                        />
-                        <Route
-                          path="/products/:slug"
-                          element={<ProductPage />}
-                        />
-                        <Route path="/cart" element={<CartPage />} />
+                      {/* Public Routes */}
+                      <Route path="/" element={<Index />} />
+                      <Route path="/faqs" element={<FAQsPage />} />
+                      <Route path="/guide" element={<GuidePage />} />
+                      <Route path="/about-us" element={<AboutUs />} />
+                      <Route
+                        path="/products"
+                        element={<ProductListingPage />}
+                      />
+                      <Route
+                        path="/category/:slug"
+                        element={<CategoryPage />}
+                      />
+                      <Route path="/products/:slug" element={<ProductPage />} />
+                      <Route path="/cart" element={<CartPage />} />
 
-                        {/* Guest Only Routes (redirect to home if logged in) */}
-                        <Route
-                          path="/auth"
-                          element={
-                            <GuestRoute>
-                              <AuthPage />
-                            </GuestRoute>
-                          }
-                        />
+                      {/* Home page - uses PageRenderer with slug="/" */}
+                      <Route path="/render" element={<PageRenderer />} />
+                      {/* Dynamic pages - catches all other routes */}
+                      <Route path="/render/:slug" element={<PageRenderer />} />
+                      {/* Nested page routes if needed */}
+                      <Route
+                        path="/render/:category/:slug"
+                        element={<PageRenderer />}
+                      />
 
-                        {/* Protected Customer Routes (require login) */}
-                        <Route
-                          path="/account"
-                          element={
-                            <ProtectedRoute>
-                              <AccountPage />
-                            </ProtectedRoute>
-                          }
-                        />
-                        <Route
-                          path="/checkout"
-                          element={
-                            <ProtectedRoute>
-                              <CheckoutPage />
-                            </ProtectedRoute>
-                          }
-                        />
-                        <Route
-                          path="/orders"
-                          element={
-                            <ProtectedRoute>
-                              <OrdersPage />
-                            </ProtectedRoute>
-                          }
-                        />
-                        <Route
-                          path="/order-confirmation/:orderId"
-                          element={
-                            <ProtectedRoute>
-                              <OrderConfirmationPage />
-                            </ProtectedRoute>
-                          }
-                        />
+                      {/* Guest Only Routes (redirect to home if logged in) */}
+                      <Route
+                        path="/auth"
+                        element={
+                          <GuestRoute>
+                            <AuthPage />
+                          </GuestRoute>
+                        }
+                      />
 
-                        {/* Admin Routes (require admin role) */}
-                        <Route
-                          path="/admin"
-                          element={
-                            <ProtectedRoute requireAdmin>
-                              <AdminLayout />
-                            </ProtectedRoute>
-                          }
-                        >
-                          <Route index element={<DashboardPage />} />
-                          <Route path="products" element={<ProductsPage />} />
-                          <Route path="orders" element={<OrdersAdminPage />} />
-                          <Route
-                            path="website-builder"
-                            element={<WebsiteBuilder />}
-                          />
-                          <Route path="users" element={<UsersPage />} />
-                          <Route path="account" element={<AccountSettings />} />
-                          <Route path="settings" element={<SettingsPage />} />
-                        </Route>
+                      {/* Protected Customer Routes (require login) */}
+                      <Route
+                        path="/account"
+                        element={
+                          <ProtectedRoute>
+                            <AccountPage />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/checkout"
+                        element={
+                          <ProtectedRoute>
+                            <CheckoutPage />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/orders"
+                        element={
+                          <ProtectedRoute>
+                            <OrdersPage />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/order-confirmation/:orderId"
+                        element={
+                          <ProtectedRoute>
+                            <OrderConfirmationPage />
+                          </ProtectedRoute>
+                        }
+                      />
 
-                        {/* Catch-all 404 */}
-                        <Route path="*" element={<NotFound />} />
-                      </>
-                    )}
-                  </Routes>
-                </BrowserRouter>
-              </TooltipProvider>
-            </OrderProvider>
-          </CartProvider>
-        </AuthProvider>
-      </GeneralProvider>
-    </QueryClientProvider>
+                      {/* Admin Routes (require admin role) */}
+                      <Route
+                        path="/admin"
+                        element={
+                          <ProtectedRoute requireAdmin>
+                            <AdminLayout />
+                          </ProtectedRoute>
+                        }
+                      >
+                        <Route index element={<DashboardPage />} />
+                        <Route path="products" element={<ProductsPage />} />
+                        <Route path="orders" element={<OrdersAdminPage />} />
+                        <Route
+                          path="website-builder"
+                          element={<WebsiteBuilder />}
+                        />
+                        <Route path="users" element={<UsersPage />} />
+                        <Route path="account" element={<AccountSettings />} />
+                        <Route path="settings" element={<SettingsPage />} />
+                        {/* Page Builder Routes */}
+                        <Route path="pages" element={<PageBuilder />} />
+                        <Route
+                          path="pages/:pageId/edit"
+                          element={<PageEditor />}
+                        />
+                      </Route>
+
+                      {/* Catch-all 404 */}
+                      <Route path="*" element={<NotFound />} />
+                    </>
+                  )}
+                </Routes>
+              </BrowserRouter>
+            </TooltipProvider>
+          </OrderProvider>
+        </CartProvider>
+      </AuthProvider>
+    </GeneralProvider>
   );
 };
 

@@ -55,6 +55,16 @@ type DB interface {
 	GetSetupStatus() (*models.SetupStatus, error)
 	SetupAdmin(user *models.User) (*models.User, error)
 
+	GetPages() ([]models.Page, error)
+	GetPage(pageId string) (*models.Page, error)
+	CreatePage(page models.Page) (*models.Page, error)
+	UpdatePage(pageId string, page models.Page) (*models.Page, error)
+	DeletePage(pageId string) error
+	PublishPage(pageId string) (*models.Page, error)
+	UnpublishPage(pageId string) (*models.Page, error)
+	DuplicatePage(pageId string) (*models.Page, error)
+	ReorderPageSections(pageId string, sectionIds []string) (*models.Page, error)
+
 	// Lifecycle
 	Close() error
 }

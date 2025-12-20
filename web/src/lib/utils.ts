@@ -8,6 +8,7 @@ import {
   ShoppingCart,
   User,
 } from "lucide-react";
+import { Page, PageSectionData, PageTemplate, SectionType } from "./page-types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -114,6 +115,183 @@ export const getPaymentBadge = (status: string) => {
   );
 };
 
+export function generateSectionId(): string {
+  return `section_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
+export function createDefaultSection(type: SectionType): PageSectionData {
+  const defaultSection = DEFAULT_SECTIONS[type];
+  return {
+    ...defaultSection,
+    id: generateSectionId(),
+  } as PageSectionData;
+}
+
+export function createDefaultPage(template: PageTemplate): Page {
+  const now = new Date().toISOString();
+
+  let sections: PageSectionData[] = [];
+
+  switch (template) {
+    case "home":
+      sections = [
+        createDefaultSection("hero"),
+        createDefaultSection("features"),
+        createDefaultSection("products"),
+        createDefaultSection("cta"),
+      ];
+      break;
+    case "about":
+      sections = [
+        createDefaultSection("about"),
+        createDefaultSection("features"),
+        createDefaultSection("testimonials"),
+      ];
+      break;
+    case "contact":
+      sections = [createDefaultSection("contact")];
+      break;
+    default:
+      sections = [];
+  }
+
+  return {
+    id: `page_${Date.now()}`,
+    title: template.charAt(0).toUpperCase() + template.slice(1),
+    slug: template === "home" ? "/" : `/${template}`,
+    template,
+    status: "draft",
+    meta_title: "",
+    meta_description: "",
+    meta_keywords: "",
+    og_image: "",
+    sections,
+    created_at: now,
+    updated_at: now,
+  };
+}
+
+export const DEFAULT_SECTIONS: Record<SectionType, Partial<PageSectionData>> = {
+  hero: {
+    type: "hero",
+    title: "Welcome to Our Store",
+    subtitle: "Discover amazing products at great prices",
+    cta_text: "Shop Now",
+    cta_link: "/products",
+    background_image: "",
+    background_type: "image",
+    overlay: true,
+    overlay_opacity: 0.5,
+    overlay_color: "#000000",
+    text_alignment: "center",
+    height: "large",
+    show_scroll_indicator: true,
+  },
+  about: {
+    type: "about",
+    title: "About Us",
+    subtitle: "Our Story",
+    description:
+      "We are dedicated to providing the best products and services.",
+    image: "",
+    image_position: "right",
+    features: ["Quality Products", "Fast Shipping", "Great Support"],
+  },
+  features: {
+    type: "features",
+    title: "Why Choose Us",
+    subtitle: "Discover what makes us special",
+    layout: "grid",
+    columns: 3,
+    items: [
+      {
+        id: "1",
+        icon: "ShoppingBag",
+        title: "Quality Products",
+        description: "We offer only the best quality products",
+      },
+      {
+        id: "2",
+        icon: "Truck",
+        title: "Fast Delivery",
+        description: "Get your orders delivered quickly",
+      },
+      {
+        id: "3",
+        icon: "Shield",
+        title: "Secure Payments",
+        description: "Your transactions are always secure",
+      },
+    ],
+  },
+  products: {
+    type: "products",
+    title: "Featured Products",
+    subtitle: "Check out our best sellers",
+    display_type: "featured",
+    limit: 8,
+    columns: 4,
+    show_price: true,
+    show_add_to_cart: true,
+  },
+  testimonials: {
+    type: "testimonials",
+    title: "What Our Customers Say",
+    subtitle: "Real reviews from real people",
+    layout: "carousel",
+    items: [],
+  },
+  gallery: {
+    type: "gallery",
+    title: "Gallery",
+    subtitle: "Explore our collection",
+    layout: "grid",
+    columns: 4,
+    images: [],
+  },
+  contact: {
+    type: "contact",
+    title: "Get In Touch",
+    subtitle: "We'd love to hear from you",
+    show_form: true,
+    show_info: true,
+    email: "hello@example.com",
+    phone: "+1 (555) 123-4567",
+    address: "123 Main St, City, Country",
+    show_map: false,
+    map_url: "",
+    social_links: true,
+  },
+  cta: {
+    type: "cta",
+    title: "Ready to Get Started?",
+    description: "Join thousands of satisfied customers today",
+    button_text: "Shop Now",
+    button_link: "/products",
+    button_style: "primary",
+    background_type: "gradient",
+    text_alignment: "center",
+  },
+  text: {
+    type: "text",
+    content: "<p>Add your text content here...</p>",
+    alignment: "left",
+    max_width: "large",
+  },
+  video: {
+    type: "video",
+    video_url: "",
+    video_type: "youtube",
+    autoplay: false,
+    loop: false,
+    controls: true,
+  },
+  spacer: {
+    type: "spacer",
+    height: "medium",
+  },
+};
+
 export const DEFAULT_CONFIG: SectionData = {
   hero: {
     title: "Welcome to Our Store",
@@ -209,6 +387,7 @@ export const DEFAULT_CONFIG: SectionData = {
     paybill_number: "",
     account_number: "",
   },
+  pages: [],
 };
 
 export const faqCategories = [

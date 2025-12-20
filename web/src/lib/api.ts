@@ -1,3 +1,5 @@
+import { Page } from "./page-types";
+
 export const API_URL = import.meta.env.DEV
   ? "http://localhost:8082"
   : window.location.origin;
@@ -137,6 +139,7 @@ export interface SectionData {
   smtp: SmtpType;
   whatsapp: WhatsappType;
   mpesa: MpesaType;
+  pages?: Page[];
 }
 
 export type WebsiteSettingKey = keyof SectionData;
@@ -387,6 +390,63 @@ class ApiClient {
     return this.request<User>(`/api/auth/me/password`, {
       method: "PUT",
       body: JSON.stringify(data),
+    });
+  }
+
+  //pages
+  async getPages() {
+    return this.request<Page[]>(`/api/pages`);
+  }
+
+  // Get a single page by ID
+  async getPage(pageId: string) {
+    return this.request<Page>(`/api/pages/${pageId}`);
+  }
+
+  async createPage(page: Partial<Page>) {
+    return this.request<Page>(`/api/admin/pages`, {
+      method: "POST",
+      body: JSON.stringify(page),
+    });
+  }
+
+  async updatePage(pageId: string, page: Partial<Page>) {
+    return this.request<Page>(`/api/admin/pages/${pageId}`, {
+      method: "PUT",
+      body: JSON.stringify(page),
+    });
+  }
+
+  async deletePage(pageId: string) {
+    return this.request<void>(`/api/admin/pages/${pageId}`, {
+      method: "DELETE",
+    });
+  }
+
+  async publishPage(pageId: string) {
+    return this.request<void>(`/api/admin/pages/${pageId}/publish`, {
+      method: "POST",
+    });
+  }
+
+  async unpublishPage(pageId: string) {
+    return this.request<void>(`/api/admin/pages/${pageId}/unpublish`, {
+      method: "POST",
+    });
+  }
+
+  // Duplicate a page
+  async duplicatePage(pageId: string) {
+    return this.request<Page>(`/api/admin/pages/${pageId}/duplicate`, {
+      method: "POST",
+    });
+  }
+
+  // Reorder page sections
+  async reorderPageSections(pageId: string, sectionIds: string[]) {
+    return this.request<void>(`/api/admin/pages/${pageId}/reorder-sections`, {
+      method: "POST",
+      body: JSON.stringify({ section_ids: sectionIds }),
     });
   }
 
