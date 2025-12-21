@@ -439,7 +439,7 @@ func (s *Server) handleHealth(c *gin.Context) {
 func (s *Server) handleRoot(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": "ELEGANCE API",
-		"version": "0.3.1",
+		"version": "0.3.2",
 		"endpoints": map[string]string{
 			"health":          "GET /api/health",
 			"categories":      "GET /api/categories",
