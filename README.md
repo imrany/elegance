@@ -40,4 +40,4 @@ For support, please visit our [GitHub Issues](https://github.com/imrany/elegance
 If you find Elegance useful, consider sponsoring our project on [GitHub Sponsors](https://github.com/sponsors/imrany).
 
 ## Demonstration
-![Elegance Demo](./elegance.webm)
+![Elegance Demo](./elegance.gif)
