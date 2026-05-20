@@ -241,7 +241,7 @@ export default function OrderConfirmationPage() {
                       {formatDate(order.created_at)}
                     </CardDescription>
                   </div>
-                  <div className="text-right space-y-1">
+                  <div className="text-right space-y-1 space-x-1">
                     <Badge variant={statusBadge.variant}>
                       {statusBadge.label}
                     </Badge>
@@ -288,21 +288,19 @@ export default function OrderConfirmationPage() {
                   </div>
                 </div>
 
-                <Separator />
-
                 {/* Order Totals */}
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Subtotal</span>
-                    <span className="text-foreground">
+                    <span className="text-foreground font-semibold">
                       {formatPrice(order.subtotal)}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Delivery Fee</span>
-                    <span className="text-foreground">
+                    <span className="text-foreground font-semibold">
                       {order.delivery_fee === 0 ? (
-                        <span className="font-medium text-green-600">FREE</span>
+                        <span className=" text-green-600">FREE</span>
                       ) : (
                         formatPrice(order.delivery_fee)
                       )}
@@ -311,7 +309,7 @@ export default function OrderConfirmationPage() {
                   <Separator />
                   <div className="flex justify-between text-base font-medium">
                     <span className="text-foreground">Total</span>
-                    <span className="text-foreground">
+                    <span className="text-foreground font-semibold">
                       {formatPrice(order.total)}
                     </span>
                   </div>

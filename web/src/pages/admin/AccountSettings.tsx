@@ -26,6 +26,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import { useSearchParams } from "react-router-dom";
 
 interface ProfileFormData {
   firstName: string;
@@ -43,6 +44,10 @@ interface PasswordFormData {
 export default function AccountSettings() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Sync tab selection state directly to URL search params
+  const activeTab = searchParams.get("tab") ?? "profile";
 
   const [profileData, setProfileData] = useState<ProfileFormData>({
     firstName: user?.first_name || "",
@@ -59,7 +64,7 @@ export default function AccountSettings() {
 
   const [showPasswordSuccess, setShowPasswordSuccess] = useState(false);
 
-  // Update profile form when user data changes
+  // Sync profile fields safely when initial asynchronous auth context resolves
   useEffect(() => {
     if (user) {
       setProfileData({
@@ -71,36 +76,54 @@ export default function AccountSettings() {
     }
   }, [user]);
 
+  // Clean success alert timeout handling on component unmount or tab switch
+  useEffect(() => {
+    if (!showPasswordSuccess) return;
+
+    const timer = setTimeout(() => {
+      setShowPasswordSuccess(false);
+    }, 5000);
+
+    return () => clearTimeout(timer);
+  }, [showPasswordSuccess]);
+
+  // Handle auto-dismissal if they change tabs manually
+  useEffect(() => {
+    if (activeTab !== "security") {
+      setShowPasswordSuccess(false);
+    }
+  }, [activeTab]);
+
   // Update profile mutation
   const updateProfileMutation = useMutation({
     mutationFn: async (data: ProfileFormData) => {
-      const response = await api.updateUser({
+      if (!user?.id) throw new Error("No active user session found");
+
+      return await api.updateUserAccount({
         id: user.id,
         first_name: data.firstName,
         last_name: data.lastName,
         email: data.email,
         phone_number: data.phoneNumber,
       });
-      return response;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["user"] });
       toast.success("Profile updated successfully");
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onError: (error: any) => {
-      toast.error(error?.error || "Failed to update profile");
+      toast.error(error?.message || "Failed to update profile");
     },
   });
 
   // Change password mutation
   const changePasswordMutation = useMutation({
     mutationFn: async (data: PasswordFormData) => {
-      const response = await api.changePassword({
+      return await api.changeUserPassword({
         current_password: data.currentPassword,
         new_password: data.newPassword,
       });
-      return response;
     },
     onSuccess: () => {
       setShowPasswordSuccess(true);
@@ -110,18 +133,16 @@ export default function AccountSettings() {
         confirmPassword: "",
       });
       toast.success("Password changed successfully");
-      setTimeout(() => setShowPasswordSuccess(false), 5000);
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onError: (error: any) => {
-      toast.error(error?.error || "Failed to change password");
+      toast.error(error?.message || "Failed to change password");
     },
   });
 
   const handleProfileSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validation
     if (!profileData.firstName.trim() || !profileData.lastName.trim()) {
       toast.error("First name and last name are required");
       return;
@@ -138,7 +159,6 @@ export default function AccountSettings() {
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validation
     if (!passwordData.currentPassword) {
       toast.error("Current password is required");
       return;
@@ -157,6 +177,14 @@ export default function AccountSettings() {
     changePasswordMutation.mutate(passwordData);
   };
 
+  if (!user) {
+    return (
+      <div className="flex h-[40vh] items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -169,7 +197,11 @@ export default function AccountSettings() {
         </p>
       </div>
 
-      <Tabs defaultValue="profile" className="space-y-6">
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => setSearchParams({ tab: value })}
+        className="space-y-6"
+      >
         <TabsList>
           <TabsTrigger value="profile">
             <User className="mr-2 h-4 w-4" />
@@ -233,15 +265,7 @@ export default function AccountSettings() {
                       id="email"
                       type="email"
                       value={profileData.email}
-                      onChange={(e) =>
-                        setProfileData({
-                          ...profileData,
-                          email: e.target.value,
-                        })
-                      }
-                      className="pl-10"
-                      // required
-                      // disabled={updateProfileMutation.isPending}
+                      className="pl-10 text-muted-foreground bg-muted/50"
                       readOnly
                       disabled
                     />
@@ -298,7 +322,7 @@ export default function AccountSettings() {
               <div className="flex items-center justify-between py-2">
                 <span className="text-sm text-muted-foreground">Role</span>
                 <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                  {user?.role || "Admin"}
+                  {user.role || "Admin"}
                 </span>
               </div>
               <div className="flex items-center justify-between py-2">
@@ -306,7 +330,7 @@ export default function AccountSettings() {
                   Account ID
                 </span>
                 <span className="text-sm font-mono text-muted-foreground">
-                  {user?.id?.substring(0, 8)}...
+                  {user.id ? `${user.id.substring(0, 8)}...` : "N/A"}
                 </span>
               </div>
               <div className="flex items-center justify-between py-2">
@@ -314,7 +338,7 @@ export default function AccountSettings() {
                   Member Since
                 </span>
                 <span className="text-sm">
-                  {user?.created_at ? formatDate(user.created_at) : "N/A"}
+                  {user.created_at ? formatDate(user.created_at) : "N/A"}
                 </span>
               </div>
             </CardContent>

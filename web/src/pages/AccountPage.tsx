@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { Layout } from "@/components/layout/Layout";
+import { useSearchParams } from "react-router-dom";
 
 interface ProfileFormData {
   firstName: string;
@@ -44,7 +45,8 @@ interface PasswordFormData {
 export default function AccountPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState("profile");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") ?? "profile";
 
   const [profileData, setProfileData] = useState<ProfileFormData>({
     firstName: user?.first_name || "",
@@ -73,23 +75,32 @@ export default function AccountPage() {
     }
   }, [user]);
 
+  // Automatically dismiss password success alert if tab changes
+  useEffect(() => {
+    if (activeTab !== "security") {
+      setShowPasswordSuccess(false);
+    }
+  }, [activeTab]);
+
   // Update profile mutation
   const updateProfileMutation = useMutation({
     mutationFn: async (data: ProfileFormData) => {
-      const response = await api.updateUserAccount({
+      if (!user?.id) throw new Error("No active session found");
+
+      return await api.updateUserAccount({
         id: user.id,
         first_name: data.firstName,
         last_name: data.lastName,
         email: data.email,
         phone_number: data.phoneNumber,
       });
-      return response;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["user"] });
       toast.success("Profile updated successfully");
     },
-    onError: (error) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onError: (error: any) => {
       toast.error(error?.message || "Failed to update profile");
     },
   });
@@ -97,11 +108,10 @@ export default function AccountPage() {
   // Change password mutation
   const changePasswordMutation = useMutation({
     mutationFn: async (data: PasswordFormData) => {
-      const response = await api.changeUserPassword({
+      return await api.changeUserPassword({
         current_password: data.currentPassword,
         new_password: data.newPassword,
       });
-      return response;
     },
     onSuccess: () => {
       setShowPasswordSuccess(true);
@@ -110,12 +120,10 @@ export default function AccountPage() {
         newPassword: "",
         confirmPassword: "",
       });
-      setTimeout(() => {
-        setShowPasswordSuccess(false);
-        setActiveTab("profile");
-      }, 3000);
+      toast.success("Password changed successfully");
     },
-    onError: (error) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onError: (error: any) => {
       toast.error(error?.message || "Failed to change password");
     },
   });
@@ -123,7 +131,6 @@ export default function AccountPage() {
   const handleProfileSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validation
     if (!profileData.firstName.trim() || !profileData.lastName.trim()) {
       toast.error("First name and last name are required");
       return;
@@ -140,7 +147,6 @@ export default function AccountPage() {
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validation
     if (!passwordData.currentPassword) {
       toast.error("Current password is required");
       return;
@@ -159,6 +165,17 @@ export default function AccountPage() {
     changePasswordMutation.mutate(passwordData);
   };
 
+  // Guard Clause: Safely blocks downstream null runtime executions
+  if (!user) {
+    return (
+      <Layout>
+        <div className="flex h-[50vh] items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
       <div className="container py-12">
@@ -174,18 +191,19 @@ export default function AccountPage() {
 
         <Tabs
           value={activeTab}
-          onValueChange={setActiveTab}
+          onValueChange={(value) => setSearchParams({ tab: value })}
           className="space-y-6 mt-2"
         >
           <TabsList>
-            <TabsTrigger value="profile">
-              <User className="mr-2 h-4 w-4" />
-              Profile
-            </TabsTrigger>
-            <TabsTrigger value="security">
-              <Shield className="mr-2 h-4 w-4" />
-              Security
-            </TabsTrigger>
+            {[
+              { value: "profile", label: "Profile", icon: User },
+              { value: "security", label: "Security", icon: Shield },
+            ].map((tab) => (
+              <TabsTrigger key={tab.value} value={tab.value}>
+                <tab.icon className="mr-2 h-4 w-4" />
+                {tab.label}
+              </TabsTrigger>
+            ))}
           </TabsList>
 
           {/* Profile Tab */}
@@ -240,15 +258,7 @@ export default function AccountPage() {
                         id="email"
                         type="email"
                         value={profileData.email}
-                        onChange={(e) =>
-                          setProfileData({
-                            ...profileData,
-                            email: e.target.value,
-                          })
-                        }
                         className="pl-10"
-                        // required
-                        // disabled={updateProfileMutation.isPending}
                         readOnly
                         disabled
                       />
@@ -305,7 +315,7 @@ export default function AccountPage() {
                 <div className="flex items-center justify-between py-2">
                   <span className="text-sm text-muted-foreground">Role</span>
                   <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                    {user?.role || "Admin"}
+                    {user.role || "Admin"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between py-2">
@@ -313,7 +323,7 @@ export default function AccountPage() {
                     Account ID
                   </span>
                   <span className="text-sm font-mono text-muted-foreground">
-                    {user?.id?.substring(0, 8)}...
+                    {user.id ? `${user.id.substring(0, 8)}...` : "N/A"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between py-2">
@@ -321,7 +331,7 @@ export default function AccountPage() {
                     Member Since
                   </span>
                   <span className="text-sm">
-                    {user?.created_at ? formatDate(user.created_at) : "N/A"}
+                    {user.created_at ? formatDate(user.created_at) : "N/A"}
                   </span>
                 </div>
               </CardContent>

@@ -92,7 +92,11 @@ export interface StoreType {
 export interface SmtpType {
   enabled: boolean;
   from_email: string;
-  resend_api_key: string;
+  from_name: string;
+  username: string;
+  password: string;
+  smtp_host: string;
+  smtp_port: number;
 }
 
 export interface WhatsappType {

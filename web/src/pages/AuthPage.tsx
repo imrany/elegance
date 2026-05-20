@@ -119,7 +119,7 @@ export default function AuthPage() {
     setLoading(true);
 
     try {
-      const { error } = await signIn(email, password);
+      const { error, data: user } = await signIn(email, password);
       if (error) {
         console.error(error);
         if (
@@ -132,8 +132,12 @@ export default function AuthPage() {
         }
       } else {
         toast.success("Welcome back!");
-        const redirect = searchParams.get("redirect") || "/";
-        navigate(redirect);
+        const redirect = searchParams.get("redirect");
+        if (user && user.role === "admin" && !redirect) {
+          navigate("/admin");
+        } else {
+          navigate(redirect);
+        }
       }
     } finally {
       setLoading(false);

@@ -26,14 +26,15 @@ import {
   Phone,
 } from "lucide-react";
 import { useGeneralContext } from "@/contexts/GeneralContext";
+import { SmtpType } from "../../lib/api";
+import { useSearchParams } from "react-router-dom";
 
 export default function SettingsPage() {
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") ?? "store";
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
-  const [emailEnabled, setEmailEnabled] = useState(false);
-  const [emailFromEmail, setEmailFromEmail] = useState("");
-  const [emailApiKey, setEmailApiKey] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { websiteConfig, saveWebsiteConfig: $saveWebsiteConfig } =
     useGeneralContext();
@@ -44,6 +45,22 @@ export default function SettingsPage() {
 
   const [mpesaType, setMpesaType] = useState<"till" | "paybill">(
     mpesa?.type || "till",
+  );
+  const [smtpConfig, setSmtpConfig] = useState<SmtpType>(
+    smtp
+      ? {
+          ...smtp,
+          smtp_port: Number(smtp?.smtp_port),
+        }
+      : {
+          enabled: false,
+          from_email: "example@example.com",
+          username: "example@gmail.com",
+          password: "",
+          smtp_host: "smtp.gmail.com",
+          smtp_port: 587,
+          from_name: "",
+        },
   );
 
   // Sync state when config loads
@@ -58,23 +75,27 @@ export default function SettingsPage() {
 
   // Initialize email enabled state
   useEffect(() => {
-    setEmailEnabled(smtp?.enabled || false);
-    setEmailFromEmail(smtp?.from_email || "");
-    setEmailApiKey(smtp?.resend_api_key || "");
-  }, [smtp?.enabled, smtp?.from_email, smtp?.resend_api_key]);
+    setSmtpConfig({
+      enabled: smtp?.enabled ?? false,
+      from_email: smtp?.from_email ?? "example@example.com",
+      username: smtp?.username ?? "example@gmail.com",
+      password: smtp?.password ?? "",
+      smtp_host: smtp?.smtp_host ?? "smtp.gmail.com",
+      smtp_port: Number(smtp?.smtp_port) || 587,
+      from_name: smtp?.from_name ?? "",
+    });
+  }, [smtp?.enabled, smtp?.from_email]);
 
   // Upload image mutation
   const uploadImageMutation = useMutation({
     mutationFn: async (file: File) => {
       const formData = new FormData();
       formData.append("file", file);
-      // Assuming your API has an upload endpoint
       const response = await api.uploadImage(formData);
-      return response.url; // Adjust based on your API response
+      return response.url;
     },
     onSuccess: (path) => {
       setLogoPreview(path);
-      //update store settings with new logo URL
       saveWebsiteConfig("store", {
         name: store.name,
         description: store.description,
@@ -124,18 +145,27 @@ export default function SettingsPage() {
   const handleEmailUpdate = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    // Validate email settings if enabled
-    if (emailEnabled) {
-      if (!emailFromEmail || !emailApiKey) {
+    if (smtpConfig.enabled) {
+      if (
+        !smtpConfig.from_email ||
+        !smtpConfig.smtp_host ||
+        !smtpConfig.from_name ||
+        !smtpConfig.username ||
+        !smtpConfig.password
+      ) {
         toast.error("Please fill in all required fields when email is enabled");
         return;
       }
     }
 
     saveWebsiteConfig("smtp", {
-      enabled: emailEnabled,
-      from_email: emailFromEmail,
-      resend_api_key: emailApiKey,
+      enabled: smtpConfig.enabled,
+      from_email: smtpConfig.from_email,
+      username: smtpConfig.username,
+      smtp_port: Number(smtpConfig.smtp_port),
+      smtp_host: smtpConfig.smtp_host,
+      password: smtpConfig.password,
+      from_name: smtpConfig.from_name,
     });
   };
 
@@ -144,14 +174,12 @@ export default function SettingsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Check file size (max 2MB)
     if (file.size > 2 * 1024 * 1024) {
       toast.error("Image size must be less than 2MB");
-      e.target.value = ""; // Reset input
+      e.target.value = "";
       return;
     }
 
-    // Check file type
     if (!file.type.startsWith("image/")) {
       toast.error("Please select a valid image file");
       e.target.value = "";
@@ -159,8 +187,6 @@ export default function SettingsPage() {
     }
 
     setIsUploadingLogo(true);
-
-    // Upload the image to the server
     uploadImageMutation.mutate(file);
   };
 
@@ -174,10 +200,16 @@ export default function SettingsPage() {
 
   // Check if email form is valid
   const isEmailFormValid = () => {
-    if (!emailEnabled) return true;
-    return emailFromEmail.trim() !== "" && emailApiKey.trim() !== "";
+    if (!smtpConfig.enabled) return true;
+    return (
+      smtpConfig.from_email?.trim() !== "" &&
+      smtpConfig.from_name?.trim() !== "" &&
+      smtpConfig.smtp_host?.trim() !== "" &&
+      smtpConfig.username?.trim() !== "" &&
+      smtpConfig.password?.trim() !== "" &&
+      !!smtpConfig.smtp_port
+    );
   };
-
   return (
     <div className="space-y-8">
       <div>
@@ -189,7 +221,11 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      <Tabs defaultValue="store" className="space-y-6">
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => setSearchParams({ tab: value })}
+        className="space-y-6"
+      >
         <TabsList className="grid w-full grid-cols-4">
           {[
             { value: "store", icon: Store, label: "Store" },
@@ -215,7 +251,6 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleStoreUpdate} className="space-y-6">
-                {/* Logo Upload */}
                 <div className="space-y-2">
                   <Label>Store Logo</Label>
                   <div className="flex items-center gap-4">
@@ -259,7 +294,6 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                {/* Store Name */}
                 <div className="space-y-2">
                   <Label htmlFor="name">Store Name</Label>
                   <Input
@@ -271,7 +305,6 @@ export default function SettingsPage() {
                   />
                 </div>
 
-                {/* Store Description */}
                 <div className="space-y-2">
                   <Label htmlFor="description">Store Description</Label>
                   <Textarea
@@ -284,7 +317,6 @@ export default function SettingsPage() {
                   />
                 </div>
 
-                {/* Currency */}
                 <div className="space-y-2">
                   <Label htmlFor="currency">Currency</Label>
                   <Input
@@ -296,7 +328,6 @@ export default function SettingsPage() {
                   />
                 </div>
 
-                {/* Free Delivery Threshold */}
                 <div className="space-y-2">
                   <Label htmlFor="free_delivery_threshold">
                     Free Delivery Threshold
@@ -314,7 +345,6 @@ export default function SettingsPage() {
                   </p>
                 </div>
 
-                {/* Store Announcement */}
                 <div className="space-y-2">
                   <Label htmlFor="announcement">Store Announcement</Label>
                   <Textarea
@@ -384,7 +414,6 @@ export default function SettingsPage() {
                 }}
                 className="space-y-6"
               >
-                {/* Settlement Method Selection */}
                 <div className="space-y-3">
                   <Label className="text-base">Settlement Method</Label>
                   <p className="text-sm text-muted-foreground">
@@ -467,7 +496,6 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                {/* M-Pesa Registered Number */}
                 <div className="space-y-2">
                   <Label htmlFor="mpesa-phone">
                     M-Pesa Registered Number *
@@ -490,7 +518,6 @@ export default function SettingsPage() {
                   </p>
                 </div>
 
-                {/* Conditional Fields Based on Type */}
                 {mpesaType === "till" ? (
                   <div className="space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
                     <Label htmlFor="till-number">Till Number *</Label>
@@ -543,7 +570,6 @@ export default function SettingsPage() {
                   </div>
                 )}
 
-                {/* Info Alert */}
                 <Alert className="border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950">
                   <svg
                     className="h-4 w-4 text-blue-600 dark:text-blue-400"
@@ -564,7 +590,6 @@ export default function SettingsPage() {
                   </AlertDescription>
                 </Alert>
 
-                {/* Submit Button */}
                 <Button type="submit" disabled={$saveWebsiteConfig.isPending}>
                   {$saveWebsiteConfig.isPending ? (
                     <>
@@ -638,9 +663,7 @@ export default function SettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle>SMTP Configuration</CardTitle>
-              <CardDescription>
-                Configure email notifications (Resend)
-              </CardDescription>
+              <CardDescription>Configure email notifications</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleEmailUpdate} className="space-y-6">
@@ -649,8 +672,13 @@ export default function SettingsPage() {
                     type="checkbox"
                     id="enabled"
                     name="enabled"
-                    checked={emailEnabled}
-                    onChange={(e) => setEmailEnabled(e.target.checked)}
+                    checked={smtpConfig.enabled}
+                    onChange={(e) =>
+                      setSmtpConfig((prev) => ({
+                        ...prev,
+                        enabled: e.target.checked,
+                      }))
+                    }
                     className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                   />
                   <Label htmlFor="enabled" className="cursor-pointer">
@@ -658,41 +686,115 @@ export default function SettingsPage() {
                   </Label>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="from_email">From Email</Label>
-                  <Input
-                    id="from_email"
-                    name="from_email"
-                    type="email"
-                    value={emailFromEmail}
-                    onChange={(e) => setEmailFromEmail(e.target.value)}
-                    placeholder="noreply@yourstore.com"
-                    required={emailEnabled}
-                  />
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="from_name">From Name</Label>
+                    <Input
+                      id="from_name"
+                      name="from_name"
+                      value={smtpConfig.from_name}
+                      onChange={(e) =>
+                        setSmtpConfig((prev) => ({
+                          ...prev,
+                          from_name: e.target.value,
+                        }))
+                      }
+                      placeholder="My Awesome Store"
+                      required={smtpConfig.enabled}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="from_email">From Email</Label>
+                    <Input
+                      id="from_email"
+                      name="from_email"
+                      type="email"
+                      value={smtpConfig.from_email}
+                      onChange={(e) =>
+                        setSmtpConfig((prev) => ({
+                          ...prev,
+                          from_email: e.target.value,
+                        }))
+                      }
+                      placeholder="example@gmail.com"
+                      required={smtpConfig.enabled}
+                    />
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="resend_api_key">Resend API Key</Label>
-                  <Input
-                    id="resend_api_key"
-                    name="resend_api_key"
-                    type="password"
-                    value={emailApiKey}
-                    onChange={(e) => setEmailApiKey(e.target.value)}
-                    placeholder="re_..."
-                    required={emailEnabled}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Get your API key from{" "}
-                    <a
-                      href="https://resend.com"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary hover:underline"
-                    >
-                      resend.com
-                    </a>
-                  </p>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="smtp_host">SMTP Host</Label>
+                    <Input
+                      id="smtp_host"
+                      name="smtp_host"
+                      value={smtpConfig.smtp_host}
+                      onChange={(e) =>
+                        setSmtpConfig((prev) => ({
+                          ...prev,
+                          smtp_host: e.target.value,
+                        }))
+                      }
+                      placeholder="smtp.gmail.com"
+                      required={smtpConfig.enabled}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="smtp_port">SMTP Port</Label>
+                    <Input
+                      id="smtp_port"
+                      name="smtp_port"
+                      type="number"
+                      value={smtpConfig.smtp_port || ""}
+                      onChange={(e) =>
+                        setSmtpConfig((prev) => ({
+                          ...prev,
+                          smtp_port: Number(e.target.value),
+                        }))
+                      }
+                      placeholder="587"
+                      required={smtpConfig.enabled}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="username">Username / Mail Email</Label>
+                    <Input
+                      id="username"
+                      name="username"
+                      value={smtpConfig.username}
+                      onChange={(e) =>
+                        setSmtpConfig((prev) => ({
+                          ...prev,
+                          username: e.target.value,
+                        }))
+                      }
+                      placeholder="example@gmail.com"
+                      required={smtpConfig.enabled}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password / App Password</Label>
+                    <Input
+                      id="password"
+                      name="password"
+                      type="password"
+                      value={smtpConfig.password}
+                      onChange={(e) =>
+                        setSmtpConfig((prev) => ({
+                          ...prev,
+                          password: e.target.value,
+                        }))
+                      }
+                      placeholder="••••••••••••"
+                      required={smtpConfig.enabled}
+                    />
+                  </div>
                 </div>
 
                 <Button

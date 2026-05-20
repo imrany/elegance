@@ -13,10 +13,8 @@
         <meta name="author" content="{{.Author}}" />
 
         <!-- Favicon -->
-        {{if .Favicon}}
         <link rel="icon" type="image/x-icon" href="{{.Favicon}}" />
         <link rel="shortcut icon" type="image/x-icon" href="{{.Favicon}}" />
-        {{end}}
 
         <!-- Open Graph / Facebook -->
         <meta property="og:type" content="{{.Type}}" />
@@ -31,9 +29,7 @@
         <meta name="twitter:title" content="{{.Title}}" />
         <meta name="twitter:description" content="{{.Description}}" />
         <meta name="twitter:image" content="{{.OGImage}}" />
-        {{if .TwitterSite}}
         <meta name="twitter:site" content="{{.TwitterSite}}" />
-        {{end}}
 
         <!-- Additional SEO -->
         <link rel="canonical" href="{{.URL}}" />

@@ -38,10 +38,13 @@ import { ThemeCustomizer } from "@/components/website-builder/ThemeCustomizer";
 import { SocialMediaLinks } from "@/components/website-builder/SocialMediaLinks";
 import { SEOSettings } from "@/components/website-builder/SEOSettings";
 import { DEFAULT_CONFIG } from "@/lib/utils";
+import { useSearchParams } from "react-router-dom";
 
 export default function WebsiteBuilder() {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<WebsiteSettingKey>("hero");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab: WebsiteSettingKey | string =
+    searchParams.get("tab") ?? "hero";
   const [hasChanges, setHasChanges] = useState(false);
   const [localConfig, setLocalConfig] = useState<SectionData>(DEFAULT_CONFIG);
 
@@ -213,7 +216,7 @@ export default function WebsiteBuilder() {
       {/* Main Content */}
       <Tabs
         value={activeTab}
-        onValueChange={(value) => setActiveTab(value as WebsiteSettingKey)}
+        onValueChange={(value) => setSearchParams({ tab: value })}
       >
         {/* The container: fits width, scrolls horizontally, hides scrollbar */}
         <TabsList className="h-auto max-w-full items-center justify-start border-b bg-transparent p-0 scrollbar-hide grid grid-cols-3 md:grid-cols-7 md:bg-muted md:p-1">

@@ -14,7 +14,7 @@ interface AuthContextType {
   signIn: (
     email: string,
     password: string,
-  ) => Promise<{ error?: { message: string } }>;
+  ) => Promise<{ error?: { message: string }; data?: User }>;
   signUp: (
     email: string,
     password: string,
@@ -67,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await api.signIn(email, password);
       localStorage.setItem("auth_token", response.token);
       setUser(response.user);
-      return {};
+      return { data: response.user };
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       return {

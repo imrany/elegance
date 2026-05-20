@@ -374,7 +374,11 @@ export const DEFAULT_CONFIG: SectionData = {
   smtp: {
     enabled: false,
     from_email: "",
-    resend_api_key: "",
+    from_name: "",
+    username: "",
+    password: "",
+    smtp_host: "",
+    smtp_port: 587,
   },
   whatsapp: {
     phone: "",
