@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { useGeneralContext } from "@/contexts/GeneralContext";
 import { toast } from "sonner";
 import { API_URL } from "@/lib/api";
+import { confettiBasic } from "../Confetti";
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
@@ -68,6 +69,7 @@ export function Footer() {
         throw new Error(data.message || "Failed to subscribe");
       }
 
+      confettiBasic();
       setMessage(data.message || "Thank you for subscribing!");
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {

@@ -68,7 +68,6 @@ export default function EmailSubscriptionsAdminPage() {
       queryClient.invalidateQueries({
         queryKey: ["admin-email-subscriptions"],
       });
-      toast.success("Subscriber successfully removed");
       setIsDeleteDialogOpen(false);
       setSelectedSub(null);
     },
