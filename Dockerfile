@@ -1,24 +1,27 @@
-# Multi-stage Dockerfile for elegance
-
 # -------------------------
 # Stage 1: Build the web frontend
 # -------------------------
 FROM node:20-alpine AS web-builder
 
+# Set the workdir to the root of the app context
 WORKDIR /app
 
-# Copy only the web directory to keep the build context small
-COPY web/ ./web/
+# Install pnpm globally once
+RUN npm install -g pnpm@9.12.3
 
-# Change to web directory
+# Copy ONLY dependency locks first to leverage layer caching
+COPY web/package.json web/pnpm-lock.yaml ./web/
+
+# Change to the web directory to install deps
 WORKDIR /app/web
+RUN pnpm install --frozen-lockfile
 
-# Install pnpm globally and install dependencies
-RUN npm install -g pnpm@9.12.3 && \
-    pnpm install --frozen-lockfile
+# Now copy the rest of the frontend source code into /app/web
+COPY web/ ./
 
 # Build the frontend for release mode
-# This outputs to ../internal/server/dist relative to web directory
+# Note: Ensure your web build script config (vite.config.ts or similar)
+# is set to output outDir to "../internal/router/dist"
 RUN pnpm run release
 
 # -------------------------
@@ -31,7 +34,7 @@ WORKDIR /app
 # Install build dependencies
 RUN apk add --no-cache git ca-certificates tzdata
 
-# Copy go mod files first (for better caching)
+# Copy go mod files first for optimal dependency caching
 COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod \
     go mod download
@@ -39,10 +42,10 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 # Copy all Go source code
 COPY . .
 
-# Copy the built frontend from the previous stage
-COPY --from=web-builder /app/internal/server/dist ./internal/server/dist
+# Pull the static frontend assets from Stage 1 into internal/router/dist
+COPY --from=web-builder /app/internal/router/dist ./internal/router/dist
 
-# Build the Go application
+# Build the statically linked Go application
 ARG VERSION=dev
 RUN --mount=type=cache,target=/root/.cache/go-build \
     CGO_ENABLED=0 GOOS=linux go build \
@@ -50,42 +53,36 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     -o elegance ./cmd/server/main.go
 
 # -------------------------
-# Stage 3: Final runtime image
+# Stage 3: Final lean runtime image
 # -------------------------
 FROM alpine:3.21
 
-# Install runtime dependencies
 RUN set -eux && \
     apk add --no-cache ca-certificates tzdata && \
     addgroup -S elegance && \
     adduser -S elegance -G elegance && \
+    mkdir -p /var/opt/elegance/uploads && \
+    chown -R elegance:elegance /var/opt/elegance/uploads && \
     rm -rf /var/cache/apk/*
 
 WORKDIR /opt/elegance
 
-# Copy the binary from builder stage
 COPY --from=go-builder /app/elegance .
-
-# Ensure executable
 RUN chmod +x elegance
 
-# Switch to non-root user
 USER elegance
 
-# Expose the port
+ENV UPLOAD_DIR=/var/opt/elegance/uploads
+ENV PORT=8082
+ENV GIN_MODE=release
+
 EXPOSE 8082
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:8082/api/health || exit 1
 
-# Set environment variables
-ENV UPLOAD_DIR=/var/opt/elegance/uploads
-ENV PORT=8082
-
 LABEL org.opencontainers.image.title="Elegance" \
-    org.opencontainers.image.description="Elegance is a modern, open-source, AI-driven self-hosted knowledge management and note-taking platform." \
+    org.opencontainers.image.description="Elegance is a modern, open-source, fully functional and self-hosted ecommerce platform." \
     org.opencontainers.image.source="https://github.com/imrany/elegance"
 
-# Start the application
 ENTRYPOINT ["./elegance"]
