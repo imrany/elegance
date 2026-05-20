@@ -230,7 +230,6 @@ export function Footer() {
               Subscribe for exclusive offers and style inspiration.
             </p>
 
-            {/* FIX: Form displays ONLY when both fields are cleanly reset */}
             {!error && !message ? (
               <form onSubmit={handleSubscribe} className="flex gap-2">
                 <Input
@@ -273,9 +272,22 @@ export function Footer() {
 
         {/* Bottom Bar */}
         <div className="mt-16 flex flex-col items-center justify-between gap-4 border-t border-primary-foreground/10 pt-8 md:flex-row">
-          <p className="text-xs text-primary-foreground/50">
-            © {currentYear} {store.name}. All rights reserved.
-          </p>
+          <div className="flex flex-col items-center gap-1 md:items-start">
+            <p className="text-xs text-primary-foreground/50">
+              © {currentYear} {store.name}. All rights reserved.
+            </p>
+            <p className="text-xs text-primary-foreground/40">
+              Made by{" "}
+              <a
+                href="https://github.com/imrany"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-primary-foreground/60 transition-colors hover:text-accent-foreground underline underline-offset-2"
+              >
+                Imran
+              </a>
+            </p>
+          </div>
           <div className="flex gap-6">
             <Link
               to="/faqs?search=account"
