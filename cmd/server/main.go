@@ -10,7 +10,7 @@ import (
 
 	"github.com/imrany/elegance/internal/database"
 	"github.com/imrany/elegance/internal/migrator"
-	"github.com/imrany/elegance/internal/server"
+	"github.com/imrany/elegance/internal/router"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/spf13/cobra"
@@ -32,8 +32,8 @@ func openDatabase(dbType, dsn string) (*sql.DB, error) {
 }
 
 func runServer() {
-	cfg := &server.Config{
-		Server: server.ServerConfig{
+	cfg := &router.Config{
+		Server: router.ServerConfig{
 			Port: viper.GetInt("port"),
 			Host: viper.GetString("host"),
 		},
@@ -87,7 +87,7 @@ func runServer() {
 	log.Printf("Connected to %s database successfully", cfg.DBType)
 
 	// Create and start server
-	srv := server.New(cfg, db)
+	srv := router.New(cfg, db)
 
 	// Graceful shutdown
 	quit := make(chan os.Signal, 1)

@@ -123,6 +123,12 @@ type SetupStatus struct {
 	HasAdmin      bool `json:"has_admin" db:"has_admin"`
 }
 
+type EmailSubscription struct {
+	ID        string     `json:"id" db:"id"`
+	Email     string     `json:"email" db:"email" binding:"required,email"`
+	CreatedAt *time.Time `json:"created_at" db:"created_at"`
+}
+
 // PageStatus represents the publication status of a page
 type PageStatus string
 

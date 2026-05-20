@@ -10,6 +10,7 @@ import {
   User,
   UsersRound,
   ToolCase,
+  MailQuestionMarkIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,6 +24,11 @@ const navItems = [
   { name: "Products", href: "/admin/products", icon: Package },
   { name: "Orders", href: "/admin/orders", icon: ShoppingCart },
   { name: "Users", href: "/admin/users", icon: UsersRound },
+  {
+    name: "Email Subscriptions",
+    href: "/admin/email-subscriptions",
+    icon: MailQuestionMarkIcon,
+  },
   { name: "Settings", href: "/admin/settings", icon: Settings },
   { name: "Website Builder", href: "/admin/website-builder", icon: ToolCase },
 ];

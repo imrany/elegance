@@ -1,4 +1,4 @@
-package server
+package router
 
 import (
 	"embed"
@@ -161,6 +161,16 @@ func (s *Server) setupRoutes() {
 		{
 			categories.GET("", s.handler.GetCategories)
 			categories.GET("/:slug", s.handler.GetCategoryBySlug)
+		}
+
+		//email subscription
+		email := api.Group("/email")
+		{
+			email.POST("/subscribe", s.handler.SubscribeEmail)
+			email.GET("/subscriptions", s.handler.GetEmailSubscriptions)
+			email.GET("/subscriptions/:email", s.handler.GetEmailSubscription)
+			email.DELETE("/unsubscribe/:email", s.handler.UnsubscribeEmail)
+			email.GET("/unsubscribe/:email", s.handler.UnsubscribeEmail)
 		}
 
 		// Products (public)

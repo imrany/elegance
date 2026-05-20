@@ -36,6 +36,7 @@ import { GuidePage } from "./pages/GuidePage";
 import PageBuilder from "./pages/admin/page-builder/PageBuilder";
 import PageEditor from "./pages/admin/page-builder/PageEditor";
 import PageRenderer from "./pages/admin/page-builder/PageRender";
+import EmailSubscriptionsAdminPage from "./pages/admin/EmailSubscriptions";
 
 const App = () => {
   const [setupNeeded, setSetupNeeded] = useState<boolean | null>(null);
@@ -184,6 +185,10 @@ const App = () => {
                         />
                         <Route path="users" element={<UsersPage />} />
                         <Route path="account" element={<AccountSettings />} />
+                        <Route
+                          path="email-subscriptions"
+                          element={<EmailSubscriptionsAdminPage />}
+                        />
                         <Route path="settings" element={<SettingsPage />} />
                         {/* Page Builder Routes */}
                         <Route path="pages" element={<PageBuilder />} />

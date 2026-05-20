@@ -51,6 +51,12 @@ type DB interface {
 	UpdateUserRole(id, role string) error
 	DeleteUser(id string) error
 
+	// email subscriptions
+	GetEmailSubscriptions() ([]models.EmailSubscription, error)
+	GetEmailSubscriptionByEmail(email string) (*models.EmailSubscription, error)
+	CreateEmailSubscription(subscription *models.EmailSubscription) error
+	DeleteEmailSubscription(id string) error
+
 	// setup  (initial)
 	GetSetupStatus() (*models.SetupStatus, error)
 	SetupAdmin(user *models.User) (*models.User, error)
