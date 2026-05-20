@@ -14,7 +14,7 @@ COPY web/ ./web/
 WORKDIR /app/web
 
 # Install pnpm globally and install dependencies
-RUN npm install -g pnpm@latest && \
+RUN npm install -g pnpm@9.12.3 && \
     pnpm install --frozen-lockfile
 
 # Build the frontend for release mode
@@ -24,7 +24,7 @@ RUN pnpm run release
 # -------------------------
 # Stage 2: Build the Go application
 # -------------------------
-FROM golang:1.24-alpine AS go-builder
+FROM golang:1.25-alpine AS go-builder
 
 WORKDIR /app
 
