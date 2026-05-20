@@ -13,18 +13,18 @@ An ecommerce template for building online clothing stores.
 To install Elegance, follow these steps:
 
 1. Clone the repository:
-   ```
+   ```bash
    git clone https://github.com/imrany/elegance.git
    ```
 
 2. Install dependencies:
-   ```
+   ```bash
    go mod tidy
    ```
 
 3. Start the development server:
-   ```
-   go run main.go
+   ```bash
+   go run cmd/server/main.go
    ```
 
 ## Contributing
@@ -41,4 +41,3 @@ If you find Elegance useful, consider sponsoring our project on [GitHub Sponsors
 
 ## Demonstration
 <img src="./elegance.gif" alt="Elegance Demo" width="600">
-

@@ -12,6 +12,7 @@ import (
 	"github.com/imrany/elegance/internal/migrator"
 	"github.com/imrany/elegance/internal/server"
 	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -55,7 +56,7 @@ func runServer() {
 	// Initialize database connection for migrations
 	sqlDB, err := openDatabase(cfg.DBType, DBDSN)
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		log.Fatalf("%v", err)
 	}
 
 	// Run migrations automatically
@@ -63,12 +64,12 @@ func runServer() {
 	m, err := migrator.New(sqlDB, cfg.DBType)
 	if err != nil {
 		sqlDB.Close()
-		log.Fatalf("Failed to create migrator: %v", err)
+		log.Fatalf("%v", err)
 	}
 
 	if err := m.Up(nil); err != nil {
 		sqlDB.Close()
-		log.Fatalf("Failed to run migrations: %v", err)
+		log.Fatalf("%v", err)
 	}
 	log.Println("Migrations completed successfully")
 
@@ -138,7 +139,7 @@ func main() {
 	rootCmd.PersistentFlags().Int("port", 8000, "Port to listen on (e.g., 8000)")
 	rootCmd.PersistentFlags().String("host", "localhost", "Host to listen on (e.g., localhost, 0.0.0.0)")
 	rootCmd.PersistentFlags().String("jwt-secret", "secret", "JWT secret key for authentication")
-	rootCmd.PersistentFlags().String("db-type", "sqlite3", "Database type (sqlite3 or postgres)")
+	rootCmd.PersistentFlags().String("db-type", "sqlite", "Database type (sqlite or postgres)")
 	rootCmd.PersistentFlags().String("db-dsn", "./elegance.db", "Database DSN/connection string")
 	rootCmd.PersistentFlags().String("upload-dir", "./uploads", "Upload directory")
 
