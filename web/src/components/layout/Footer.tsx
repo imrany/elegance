@@ -99,7 +99,7 @@ export function Footer() {
                   href={socialMedia["twitter"]}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary-foreground/70 transition-colors hover:text-accent-foreground"
+                  className="text-primary-foreground/70 transition-colors hover:text-accent"
                 >
                   <Twitter className="h-5 w-5" />
                 </a>
@@ -109,7 +109,7 @@ export function Footer() {
                   href={socialMedia["instagram"]}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary-foreground/70 transition-colors hover:text-accent-foreground"
+                  className="text-primary-foreground/70 transition-colors hover:text-accent"
                 >
                   <Instagram className="h-5 w-5" />
                 </a>
@@ -119,7 +119,7 @@ export function Footer() {
                   href={socialMedia["facebook"]}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary-foreground/70 transition-colors hover:text-accent-foreground"
+                  className="text-primary-foreground/70 transition-colors hover:text-accent"
                 >
                   <Facebook className="h-5 w-5" />
                 </a>
@@ -129,7 +129,7 @@ export function Footer() {
                   href={socialMedia["linkedin"]}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary-foreground/70 transition-colors hover:text-accent-foreground"
+                  className="text-primary-foreground/70 transition-colors hover:text-accent"
                 >
                   <Linkedin className="h-5 w-5" />
                 </a>
@@ -139,7 +139,7 @@ export function Footer() {
                   href={socialMedia["youtube"]}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary-foreground/70 transition-colors hover:text-accent-foreground"
+                  className="text-primary-foreground/70 transition-colors hover:text-accent"
                 >
                   <Youtube className="h-5 w-5" />
                 </a>
@@ -149,7 +149,7 @@ export function Footer() {
                   href={socialMedia["tiktok"]}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary-foreground/70 transition-colors hover:text-accent-foreground"
+                  className="text-primary-foreground/70 transition-colors hover:text-accent"
                 >
                   <Link2 className="h-5 w-5" />
                 </a>
@@ -175,7 +175,7 @@ export function Footer() {
                     <Link
                       key={category.slug}
                       to={`/category/${category.slug}`}
-                      className="text-sm text-primary-foreground/70 transition-colors hover:text-accent-foreground"
+                      className="text-sm text-primary-foreground/70 transition-colors hover:text-accent"
                     >
                       {category.name}
                     </Link>
@@ -196,25 +196,25 @@ export function Footer() {
             <nav className="flex flex-col gap-3">
               <Link
                 to="/about-us"
-                className="text-sm text-primary-foreground/70 transition-colors hover:text-accent-foreground"
+                className="text-sm text-primary-foreground/70 transition-colors hover:text-accent"
               >
                 About Us
               </Link>
               <Link
                 to="/faqs?search=shipping"
-                className="text-sm text-primary-foreground/70 transition-colors hover:text-accent-foreground"
+                className="text-sm text-primary-foreground/70 transition-colors hover:text-accent"
               >
                 Shipping & Returns
               </Link>
               <Link
                 to="/guide"
-                className="text-sm text-primary-foreground/70 transition-colors hover:text-accent-foreground"
+                className="text-sm text-primary-foreground/70 transition-colors hover:text-accent"
               >
                 Guide
               </Link>
               <Link
                 to="/faqs"
-                className="text-sm text-primary-foreground/70 transition-colors hover:text-accent-foreground"
+                className="text-sm text-primary-foreground/70 transition-colors hover:text-accent"
               >
                 FAQs
               </Link>
@@ -283,7 +283,7 @@ export function Footer() {
                 href="https://github.com/imrany"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-medium text-primary-foreground/60 transition-colors hover:text-accent-foreground underline underline-offset-2"
+                className="font-medium text-primary-foreground/60 transition-colors hover:text-accent underline underline-offset-2"
               >
                 Imran Matano
               </a>
@@ -292,13 +292,13 @@ export function Footer() {
           <div className="flex gap-6">
             <Link
               to="/faqs?search=account"
-              className="text-xs text-accent-foreground/50 hover:text-accent-foreground"
+              className="text-xs text-accent-foreground/50 hover:text-accent"
             >
               Privacy Policy
             </Link>
             <Link
               to="/faqs?search=shipping"
-              className="text-xs text-accent-foreground/50 hover:text-accent-foreground"
+              className="text-xs text-accent-foreground/50 hover:text-accent"
             >
               Terms of Service
             </Link>

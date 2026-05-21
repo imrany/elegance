@@ -29,6 +29,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
 import { useGeneralContext } from "@/contexts/GeneralContext";
+import { fireFireworks } from "@/components/Confetti";
 
 interface CheckoutFormData {
   firstName: string;
@@ -119,6 +120,7 @@ export default function CheckoutPage() {
       toast.success("Order placed successfully!");
       clearCache();
       clearCart();
+      fireFireworks();
       navigate(`/order-confirmation/${data.id}`);
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

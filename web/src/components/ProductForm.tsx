@@ -115,6 +115,24 @@ export function ProductForm({
   // Clear cache function
   const clearCache = () => {
     try {
+      setFormData({
+        id: null,
+        category_name: "",
+        created_at: null,
+        updated_at: null,
+        name: "",
+        slug: "",
+        description: "",
+        price: 0,
+        original_price: 0,
+        category_id: "",
+        images: [],
+        sizes: "",
+        colors: "",
+        stock: 0,
+        featured: false,
+        is_new: false,
+      });
       localStorage.removeItem(CACHE_KEY);
     } catch (error) {
       console.error("Error clearing cache:", error);
@@ -207,7 +225,11 @@ export function ProductForm({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
-      toast.success(product ? "Product updated" : "Product created");
+      toast.success(
+        product
+          ? "Product updated successfully"
+          : "Product created successfully",
+      );
       clearCache(); // Clear cache on success
       onSuccess();
     },
@@ -269,24 +291,6 @@ export function ProductForm({
 
   const handleClearForm = () => {
     if (confirm("Are you sure you want to clear all form data?")) {
-      setFormData({
-        id: null,
-        category_name: "",
-        created_at: null,
-        updated_at: null,
-        name: "",
-        slug: "",
-        description: "",
-        price: 0,
-        original_price: 0,
-        category_id: "",
-        images: [],
-        sizes: "",
-        colors: "",
-        stock: 0,
-        featured: false,
-        is_new: false,
-      });
       clearCache();
       toast.success("Form cleared");
     }

@@ -1,8 +1,17 @@
-import { Link, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { useEffect } from "react";
-import { Button } from "@/components/ui/button";
+import { FileQuestion } from "lucide-react";
+import { Layout } from "@/components/layout/Layout";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
-const NotFound = () => {
+export default function NotFound() {
   const location = useLocation();
 
   useEffect(() => {
@@ -13,23 +22,33 @@ const NotFound = () => {
   }, [location.pathname]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted">
-      <div className="text-center">
-        <h1 className="mb-2 font-serif text-4xl font-light text-foreground md:text-5xl">
-          404
-        </h1>
-        <p className="mb-4 text-xl text-muted-foreground">
-          Oops! Page not found
-        </p>
-        <Button
-          asChild
-          className="text-primary-foreground hover:text-primary-foreground"
-        >
-          <Link to="/">Return to Home</Link>
-        </Button>
-      </div>
-    </div>
-  );
-};
+    <Layout>
+      <div className="container flex min-h-[75vh] flex-col items-center justify-center py-12 px-4">
+        <Card className="w-full max-w-md border-none shadow-none bg-transparent">
+          <CardHeader className="text-center pb-4">
+            {/* Visual Icon Indicator */}
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-muted text-muted-foreground">
+              <FileQuestion className="h-7 w-7" />
+            </div>
 
-export default NotFound;
+            <CardTitle className="font-serif text-3xl font-light tracking-tight text-foreground md:text-4xl">
+              Page Not Found
+            </CardTitle>
+
+            <CardDescription className="mt-3 text-sm text-muted-foreground leading-relaxed">
+              The resource you are looking for might have been removed, had its
+              name changed, or is temporarily unavailable.
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="space-y-4">
+            {/* Context block for explicit user feedback regarding the broken path */}
+            <div className="rounded-md border bg-muted/40 p-3 text-center text-xs font-mono text-muted-foreground break-all">
+              Path: {location.pathname}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </Layout>
+  );
+}

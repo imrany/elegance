@@ -18,22 +18,20 @@ import { HeroSectionRenderer } from "@/components/sections/HeroSectionRender";
 import { AboutSectionRenderer } from "@/components/sections/AboutSectionRender";
 import { FeaturesSectionRenderer } from "@/components/sections/FeaturesSectionRender";
 import { ProductsSectionRenderer } from "@/components/sections/ProductsSectionRender";
+import NotFound from "@/pages/NotFound";
 
 export default function PageRenderer() {
   const { slug } = useParams();
   const pageSlug = slug ? `${slug}` : "home";
 
-  // Fetch page data by slug
   const {
     data: pageData,
     isLoading,
     error,
   } = useQuery<Page>({
     queryKey: ["public-page", pageSlug],
-    queryFn: async () => {
-      const response = await api.getPage(pageSlug);
-      return response;
-    },
+    queryFn: () => api.getPage(pageSlug),
+    retry: 1,
   });
 
   if (isLoading) {
@@ -46,30 +44,22 @@ export default function PageRenderer() {
     );
   }
 
+  // Catch non-existent entries or fetch failures directly into styled boundary
   if (error || !pageData) {
-    return (
-      <Layout>
-        <div className="container flex min-h-[60vh] items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-4xl font-bold text-foreground">404</h1>
-            <p className="mt-2 text-muted-foreground">Page not found</p>
-          </div>
-        </div>
-      </Layout>
-    );
+    return <NotFound />;
   }
 
-  // Only show published pages to public
-  if (pageData?.status !== "published") {
+  // Handle standard unpublished guard page structure smoothly
+  if (pageData.status !== "published") {
     return (
       <Layout>
-        <div className="container flex min-h-[60vh] items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-4xl font-bold text-foreground">Coming Soon</h1>
-            <p className="mt-2 text-muted-foreground">
-              This page is not yet available
-            </p>
-          </div>
+        <div className="container flex min-h-[60vh] flex-col items-center justify-center text-center px-4">
+          <h1 className="font-serif text-3xl font-light tracking-tight text-foreground sm:text-4xl">
+            Coming Soon
+          </h1>
+          <p className="mt-3 text-base text-muted-foreground max-w-sm">
+            This custom page is draft status and not yet publicly available.
+          </p>
         </div>
       </Layout>
     );
@@ -77,31 +67,30 @@ export default function PageRenderer() {
 
   return (
     <>
-      {/* SEO Meta Tags */}
       <Helmet>
-        <title>{pageData?.meta_title || pageData?.title}</title>
-        <meta name="description" content={pageData?.meta_description || ""} />
-        <meta name="keywords" content={pageData?.meta_keywords || ""} />
-        {pageData?.og_image && (
+        <title>{pageData.meta_title || pageData.title}</title>
+        <meta name="description" content={pageData.meta_description || ""} />
+        <meta name="keywords" content={pageData.meta_keywords || ""} />
+        {pageData.og_image && (
           <>
-            <meta property="og:image" content={pageData?.og_image} />
-            <meta name="twitter:image" content={pageData?.og_image} />
+            <meta property="og:image" content={pageData.og_image} />
+            <meta name="twitter:image" content={pageData.og_image} />
           </>
         )}
         <meta
           property="og:title"
-          content={pageData?.meta_title || pageData?.title}
+          content={pageData.meta_title || pageData.title}
         />
         <meta
           property="og:description"
-          content={pageData?.meta_description || ""}
+          content={pageData.meta_description || ""}
         />
         <meta name="twitter:card" content="summary_large_image" />
       </Helmet>
 
       <Layout>
         <div className="w-full">
-          {pageData?.sections.map((section) => (
+          {pageData.sections?.map((section) => (
             <SectionRenderer key={section.id} section={section} />
           ))}
         </div>
@@ -110,7 +99,6 @@ export default function PageRenderer() {
   );
 }
 
-// Section Renderer Component
 function SectionRenderer({ section }: { section: PageSectionData }) {
   switch (section.type) {
     case "hero":

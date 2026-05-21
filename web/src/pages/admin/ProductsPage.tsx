@@ -498,11 +498,6 @@ export default function ProductsPage() {
                   queryClient.invalidateQueries({
                     queryKey: ["admin-products"],
                   });
-                  toast.success(
-                    editingProduct
-                      ? "Product updated successfully"
-                      : "Product created successfully",
-                  );
                 }}
               />
             </PanelBody>
