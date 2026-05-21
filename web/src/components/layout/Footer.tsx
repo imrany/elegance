@@ -227,7 +227,8 @@ export function Footer() {
               Newsletter
             </h3>
             <p className="text-sm text-primary-foreground/70">
-              Subscribe for exclusive offers and style inspiration.
+              Subscribe for exclusive offers, product updates and time-sensitive
+              discounts!
             </p>
 
             {!error && !message ? (
@@ -284,20 +285,20 @@ export function Footer() {
                 rel="noopener noreferrer"
                 className="font-medium text-primary-foreground/60 transition-colors hover:text-accent-foreground underline underline-offset-2"
               >
-                Imran
+                Imran Matano
               </a>
             </p>
           </div>
           <div className="flex gap-6">
             <Link
               to="/faqs?search=account"
-              className="text-xs text-primary-foreground/50 hover:text-primary-foreground"
+              className="text-xs text-accent-foreground/50 hover:text-accent-foreground"
             >
               Privacy Policy
             </Link>
             <Link
               to="/faqs?search=shipping"
-              className="text-xs text-primary-foreground/50 hover:text-primary-foreground"
+              className="text-xs text-accent-foreground/50 hover:text-accent-foreground"
             >
               Terms of Service
             </Link>
