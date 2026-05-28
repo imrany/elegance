@@ -33,9 +33,6 @@ Contributions are welcome! Please read our [contributing guidelines](CONTRIBUTIN
 ## License
 Elegance is licensed under the [MIT License](LICENSE).
 
-## Support
-For support, please visit our [GitHub Issues](https://github.com/imrany/elegance/issues).
-
 ## Sponsorship
 If you find Elegance useful, consider sponsoring our project on [GitHub Sponsors](https://github.com/sponsors/imrany).
 
