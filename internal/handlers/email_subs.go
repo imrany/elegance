@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -14,7 +15,6 @@ func (h *Handler) SubscribeEmail(c *gin.Context) {
 	var req struct {
 		Email string `json:"email" binding:"required,email"`
 	}
-
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.SendResponse(c, utils.Response{
 			Status:  http.StatusBadRequest,
@@ -23,26 +23,10 @@ func (h *Handler) SubscribeEmail(c *gin.Context) {
 		return
 	}
 
-	// Normalize email strings to lowercase to prevent case-sensitive duplicate records
-	cleanEmail := strings.ToLower(strings.TrimSpace(req.Email))
-
-	subscription := &models.EmailSubscription{
-		Email: cleanEmail,
-	}
-
-	if err := h.db.CreateEmailSubscription(subscription); err != nil {
-		// Catch database unique constraint errors cleanly without exposing raw SQL errors
-		if strings.Contains(err.Error(), "UNIQUE") || strings.Contains(err.Error(), "duplicate key") {
-			utils.SendResponse(c, utils.Response{
-				Status:  http.StatusConflict,
-				Message: "Already subscribed, We'll keep you updated!",
-			})
-			return
-		}
-
+	if err := h.Subscribe(c, req.Email); err != nil {
 		utils.SendResponse(c, utils.Response{
 			Status:  http.StatusInternalServerError,
-			Message: "Failed to save subscription details",
+			Message: err.Error(),
 		})
 		return
 	}
@@ -51,6 +35,30 @@ func (h *Handler) SubscribeEmail(c *gin.Context) {
 		Status:  http.StatusOK,
 		Message: "Successfully subscribed to newsletter!",
 	})
+}
+
+// Subscribe handles the subscription process for a given email address
+func (h *Handler) Subscribe(c *gin.Context, email string) error {
+	// Normalize email strings to lowercase to prevent case-sensitive duplicate records
+	cleanEmail := strings.ToLower(strings.TrimSpace(email))
+
+	subscription := &models.EmailSubscription{
+		Email: cleanEmail,
+	}
+
+	if err := h.WelcomeNewsletterSubscription(c, []string{cleanEmail}); err != nil {
+		return fmt.Errorf("failed to send newsletter: %w", err)
+	}
+
+	if err := h.db.CreateEmailSubscription(subscription); err != nil {
+		// Catch database unique constraint errors cleanly without exposing raw SQL errors
+		if strings.Contains(err.Error(), "UNIQUE") || strings.Contains(err.Error(), "duplicate key") {
+			return fmt.Errorf("already subscribed, We'll keep you updated!")
+		}
+
+		return fmt.Errorf("failed to save subscription details: %w", err)
+	}
+	return nil
 }
 
 // GET: /email/subscriptions

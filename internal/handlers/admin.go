@@ -25,19 +25,19 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// AdminHandler handles admin-specific operations
+// Handler handles admin-specific operations
 type AdminHandler struct {
 	db        database.DB
 	jwtSecret string
 }
 
-// NewAdminHandler creates a new admin handler
+// NewHandler creates a new admin handler
 func NewAdminHandler(db database.DB, jwtSecret string) *AdminHandler {
 	return &AdminHandler{db: db, jwtSecret: jwtSecret}
 }
 
 // GetAllOrders retrieves all orders (admin only)
-func (h *AdminHandler) GetAllOrders(c *gin.Context) {
+func (h *Handler) GetAllOrders(c *gin.Context) {
 	orders, err := h.db.GetOrdersByOption("", nil)
 	if err != nil {
 		utils.SendResponse(c, utils.Response{
@@ -57,7 +57,7 @@ func (h *AdminHandler) GetAllOrders(c *gin.Context) {
 }
 
 // GetAllProducts retrieves all products (admin only)
-func (h *AdminHandler) GetAllProducts(c *gin.Context) {
+func (h *Handler) GetAllProducts(c *gin.Context) {
 	products, err := h.db.GetProducts(models.ProductFilters{})
 	if err != nil {
 		utils.SendResponse(c, utils.Response{
@@ -77,7 +77,7 @@ func (h *AdminHandler) GetAllProducts(c *gin.Context) {
 }
 
 // CreateProduct creates a new product (admin only)
-func (h *AdminHandler) CreateProduct(c *gin.Context) {
+func (h *Handler) CreateProduct(c *gin.Context) {
 	var product models.Product
 
 	if err := c.ShouldBindJSON(&product); err != nil {
@@ -98,6 +98,9 @@ func (h *AdminHandler) CreateProduct(c *gin.Context) {
 		return
 	}
 
+	// product created emails to subscribers asynchronously to avoid blocking the API response
+	h.SendBulkNewsletter(nil, product)
+
 	utils.SendResponse(c, utils.Response{
 		Status:  http.StatusCreated,
 		Success: true,
@@ -106,7 +109,7 @@ func (h *AdminHandler) CreateProduct(c *gin.Context) {
 }
 
 // UpdateProduct updates an existing product (admin only)
-func (h *AdminHandler) UpdateProduct(c *gin.Context) {
+func (h *Handler) UpdateProduct(c *gin.Context) {
 	id := c.Param("id")
 
 	var product models.Product
@@ -138,7 +141,7 @@ func (h *AdminHandler) UpdateProduct(c *gin.Context) {
 }
 
 // DeleteProduct deletes a product (admin only)
-func (h *AdminHandler) DeleteProduct(c *gin.Context) {
+func (h *Handler) DeleteProduct(c *gin.Context) {
 	id := c.Param("id")
 
 	if err := h.db.DeleteProduct(id); err != nil {
@@ -158,7 +161,7 @@ func (h *AdminHandler) DeleteProduct(c *gin.Context) {
 }
 
 // UpdateOrderStatus updates an order's status (admin only)
-func (h *AdminHandler) UpdateOrderStatus(c *gin.Context) {
+func (h *Handler) UpdateOrderStatus(c *gin.Context) {
 	id := c.Param("id")
 
 	var req struct {
@@ -202,7 +205,7 @@ func (h *AdminHandler) UpdateOrderStatus(c *gin.Context) {
 }
 
 // GetAllUsers retrieves all users (admin only)
-func (h *AdminHandler) GetAllUsers(c *gin.Context) {
+func (h *Handler) GetAllUsers(c *gin.Context) {
 	users, err := h.db.GetAllUsers()
 	if err != nil {
 		utils.SendResponse(c, utils.Response{
@@ -221,7 +224,7 @@ func (h *AdminHandler) GetAllUsers(c *gin.Context) {
 }
 
 // UpdateUserRole updates a user's role (admin only)
-func (h *AdminHandler) UpdateUserRole(c *gin.Context) {
+func (h *Handler) UpdateUserRole(c *gin.Context) {
 	userID := c.Param("id")
 
 	var req struct {
@@ -271,6 +274,7 @@ func (h *AdminHandler) UpdateUserRole(c *gin.Context) {
 		return
 	}
 
+	h.SendAccountUpdateNotice(user.Email, user.FirstName, nil, nil)
 	utils.SendResponse(c, utils.Response{
 		Status:  http.StatusOK,
 		Success: true,
@@ -279,7 +283,7 @@ func (h *AdminHandler) UpdateUserRole(c *gin.Context) {
 }
 
 // DeleteUser deletes a user account (admin only)
-func (h *AdminHandler) DeleteUser(c *gin.Context) {
+func (h *Handler) DeleteUser(c *gin.Context) {
 	userID := c.Param("id")
 
 	// Get current user ID (the admin making the change)
@@ -295,8 +299,18 @@ func (h *AdminHandler) DeleteUser(c *gin.Context) {
 		return
 	}
 
+	user, err := h.db.GetUserByID(userID)
+	if err != nil {
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusInternalServerError,
+			Success: false,
+			Message: "Failed to fetch updated user",
+		})
+		return
+	}
+
 	// Delete the user
-	if err := h.db.DeleteUser(userID); err != nil {
+	if err := h.db.DeleteUser(user.ID); err != nil {
 		utils.SendResponse(c, utils.Response{
 			Status:  http.StatusInternalServerError,
 			Success: false,
@@ -304,7 +318,7 @@ func (h *AdminHandler) DeleteUser(c *gin.Context) {
 		})
 		return
 	}
-
+	h.SendAccountDeletionNotice(user.Email, user.FirstName)
 	utils.SendResponse(c, utils.Response{
 		Status:  http.StatusOK,
 		Success: true,
@@ -313,7 +327,7 @@ func (h *AdminHandler) DeleteUser(c *gin.Context) {
 }
 
 // Setup status check
-func (h *AdminHandler) GetSetupStatus(c *gin.Context) {
+func (h *Handler) GetSetupStatus(c *gin.Context) {
 	setupStatus, err := h.db.GetSetupStatus()
 	if err != nil {
 		utils.SendResponse(c, utils.Response{
@@ -332,7 +346,7 @@ func (h *AdminHandler) GetSetupStatus(c *gin.Context) {
 }
 
 // Create admin
-func (h *AdminHandler) CreateInitialAdmin(c *gin.Context) {
+func (h *Handler) CreateInitialAdmin(c *gin.Context) {
 	// First check if any users exist
 	setupStatus, err := h.db.GetSetupStatus()
 	if err != nil {
@@ -419,7 +433,7 @@ func (h *AdminHandler) CreateInitialAdmin(c *gin.Context) {
 		"iat":     time.Now().Unix(),
 	})
 
-	tokenString, err := token.SignedString([]byte(h.jwtSecret))
+	tokenString, err := token.SignedString([]byte(h.AdminHandler.jwtSecret))
 	if err != nil {
 		utils.SendResponse(c, utils.Response{
 			Status:  http.StatusInternalServerError,
@@ -438,7 +452,7 @@ func (h *AdminHandler) CreateInitialAdmin(c *gin.Context) {
 	})
 }
 
-func (h *AdminHandler) UploadImage(c *gin.Context) {
+func (h *Handler) UploadImage(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
 		utils.SendResponse(c, utils.Response{
@@ -573,7 +587,7 @@ func DeleteFile(userID, filename string) error {
 }
 
 // DeleteImage deletes an image from the server.
-func (h *AdminHandler) DeleteImage(c *gin.Context) {
+func (h *Handler) DeleteImage(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
 		utils.SendResponse(c, utils.Response{
@@ -603,7 +617,7 @@ func (h *AdminHandler) DeleteImage(c *gin.Context) {
 	})
 }
 
-func (h *AdminHandler) GetUserOrders(c *gin.Context) {
+func (h *Handler) GetUserOrders(c *gin.Context) {
 	userID := c.Param("userId")
 	// Convert user_id to string
 	userIDStr := fmt.Sprintf("%v", userID)
@@ -624,7 +638,7 @@ func (h *AdminHandler) GetUserOrders(c *gin.Context) {
 	}
 }
 
-func (h *AdminHandler) UpdateUserPassword(c *gin.Context) {
+func (h *Handler) UpdateUserPassword(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
 		utils.SendResponse(c, utils.Response{
@@ -697,7 +711,7 @@ func (h *AdminHandler) UpdateUserPassword(c *gin.Context) {
 	})
 }
 
-func (h *AdminHandler) UpdateUser(c *gin.Context) {
+func (h *Handler) UpdateUser(c *gin.Context) {
 	var req struct {
 		Id        string `json:"id"`
 		FirstName string `json:"first_name"`
@@ -745,7 +759,7 @@ func (h *AdminHandler) UpdateUser(c *gin.Context) {
 	})
 }
 
-func (h *AdminHandler) CreateCategory(c *gin.Context) {
+func (h *Handler) CreateCategory(c *gin.Context) {
 	var req models.Category
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -774,7 +788,7 @@ func (h *AdminHandler) CreateCategory(c *gin.Context) {
 	})
 }
 
-func (h *AdminHandler) UpdateCategory(c *gin.Context) {
+func (h *Handler) UpdateCategory(c *gin.Context) {
 	slug := c.Param("slug")
 	var req models.Category
 
@@ -819,7 +833,7 @@ func (h *AdminHandler) UpdateCategory(c *gin.Context) {
 	})
 }
 
-func (h *AdminHandler) DeleteCategory(c *gin.Context) {
+func (h *Handler) DeleteCategory(c *gin.Context) {
 	idOrSlug := c.Param("unique_value")
 
 	err := h.db.DeleteCategory(idOrSlug)
@@ -839,7 +853,7 @@ func (h *AdminHandler) DeleteCategory(c *gin.Context) {
 	})
 }
 
-func (h *AdminHandler) UpdateWebsiteSetting(c *gin.Context) {
+func (h *Handler) UpdateWebsiteSetting(c *gin.Context) {
 	key := c.Param("key")
 	userID, exists := c.Get("user_id")
 	if !exists {

@@ -83,7 +83,7 @@ func New(cfg *Config, db database.DB) *Server {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	handler := handlers.New(db)
+	handler := handlers.New(db, cfg.JWTSecret)
 
 	// Load and parse index.html from embedded dist
 	indexContent, err := dist.ReadFile("dist/index.html")
@@ -141,19 +141,17 @@ func (s *Server) setupRoutes() {
 		}
 
 		// Auth endpoints (public)
-		authHandler := handlers.NewAuthHandler(s.db, s.config.JWTSecret)
 		auth := api.Group("/auth")
 		{
-			auth.POST("/signup", authHandler.SignUp)
-			auth.POST("/signin", authHandler.SignIn)
+			auth.POST("/signup", s.handler.SignUp)
+			auth.POST("/signin", s.handler.SignIn)
 		}
 
 		// Setup endpoints (public)
 		setup := api.Group("/setup")
 		{
-			setupHandler := handlers.NewAdminHandler(s.db, s.config.JWTSecret)
-			setup.GET("/status", setupHandler.GetSetupStatus)
-			setup.POST("/admin", setupHandler.CreateInitialAdmin)
+			setup.GET("/status", s.handler.GetSetupStatus)
+			setup.POST("/admin", s.handler.CreateInitialAdmin)
 		}
 
 		// Categories (public)
@@ -186,9 +184,9 @@ func (s *Server) setupRoutes() {
 		authenticated := api.Group("")
 		authenticated.Use(middleware.AuthMiddleware(s.config.JWTSecret))
 		{
-			authenticated.GET("/auth/me", authHandler.GetMe)
-			authenticated.PUT("/auth/me", authHandler.UpdateUserAccount)
-			authenticated.PUT("/auth/me/password", authHandler.ChangeUserPassword)
+			authenticated.GET("/auth/me", s.handler.GetMe)
+			authenticated.PUT("/auth/me", s.handler.UpdateUserAccount)
+			authenticated.PUT("/auth/me/password", s.handler.ChangeUserPassword)
 
 			// Orders
 			authenticated.POST("/orders", s.handler.CreateOrder)
@@ -201,37 +199,36 @@ func (s *Server) setupRoutes() {
 		admin := api.Group("/admin")
 		admin.Use(middleware.AuthMiddleware(s.config.JWTSecret), middleware.AdminOnly())
 		{
-			adminHandler := handlers.NewAdminHandler(s.db, s.config.JWTSecret)
 
 			// User management
-			admin.GET("/users", adminHandler.GetAllUsers)
-			admin.PUT("/users/:id/role", adminHandler.UpdateUserRole)
-			admin.DELETE("/users/:id", adminHandler.DeleteUser)
+			admin.GET("/users", s.handler.GetAllUsers)
+			admin.PUT("/users/:id/role", s.handler.UpdateUserRole)
+			admin.DELETE("/users/:id", s.handler.DeleteUser)
 
 			// Category management
-			admin.POST("/categories", adminHandler.CreateCategory)
-			admin.PUT("/categories/:slug", adminHandler.UpdateCategory)
-			admin.DELETE("/categories/:unique_value", adminHandler.DeleteCategory)
+			admin.POST("/categories", s.handler.CreateCategory)
+			admin.PUT("/categories/:slug", s.handler.UpdateCategory)
+			admin.DELETE("/categories/:unique_value", s.handler.DeleteCategory)
 
 			// Orders management
-			admin.GET("/orders", adminHandler.GetAllOrders)
-			admin.PUT("/orders/:id/status", adminHandler.UpdateOrderStatus)
+			admin.GET("/orders", s.handler.GetAllOrders)
+			admin.PUT("/orders/:id/status", s.handler.UpdateOrderStatus)
 
 			// Products management
-			admin.GET("/products", adminHandler.GetAllProducts)
-			admin.POST("/products", adminHandler.CreateProduct)
-			admin.PUT("/products/:id", adminHandler.UpdateProduct)
-			admin.DELETE("/products/:id", adminHandler.DeleteProduct)
-			admin.GET("/users/:userId/orders", adminHandler.GetUserOrders)
-			admin.PUT("/users/password", adminHandler.UpdateUserPassword)
-			admin.PUT("/users", adminHandler.UpdateUser)
+			admin.GET("/products", s.handler.GetAllProducts)
+			admin.POST("/products", s.handler.CreateProduct)
+			admin.PUT("/products/:id", s.handler.UpdateProduct)
+			admin.DELETE("/products/:id", s.handler.DeleteProduct)
+			admin.GET("/users/:userId/orders", s.handler.GetUserOrders)
+			admin.PUT("/users/password", s.handler.UpdateUserPassword)
+			admin.PUT("/users", s.handler.UpdateUser)
 
 			// Website builder management
-			admin.PUT("/website-builder/:key", adminHandler.UpdateWebsiteSetting)
+			admin.PUT("/website-builder/:key", s.handler.UpdateWebsiteSetting)
 
 			// Images management
-			admin.POST("/upload/image", adminHandler.UploadImage)
-			admin.DELETE("/images/:filename", adminHandler.DeleteImage)
+			admin.POST("/upload/image", s.handler.UploadImage)
+			admin.DELETE("/images/:filename", s.handler.DeleteImage)
 
 			// Pages management
 			admin.POST("/pages", s.handler.CreatePage)

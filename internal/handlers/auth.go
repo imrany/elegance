@@ -14,18 +14,14 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// AuthHandler handles authentication endpoints
+// Handler handles authentication endpoints
 type AuthHandler struct {
 	db        database.DB
 	jwtSecret string
 }
 
-// NewAuthHandler creates a new auth handler
 func NewAuthHandler(db database.DB, jwtSecret string) *AuthHandler {
-	return &AuthHandler{
-		db:        db,
-		jwtSecret: jwtSecret,
-	}
+	return &AuthHandler{db: db, jwtSecret: jwtSecret}
 }
 
 // SignUpRequest represents signup request body
@@ -44,7 +40,7 @@ type SignInRequest struct {
 }
 
 // SignUp handles user registration
-func (h *AuthHandler) SignUp(c *gin.Context) {
+func (h *Handler) SignUp(c *gin.Context) {
 	var req SignUpRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.SendResponse(c, utils.Response{
@@ -107,6 +103,17 @@ func (h *AuthHandler) SignUp(c *gin.Context) {
 		return
 	}
 
+	// Automatically subscribe user email to newsletter registry
+	cleanEmail := strings.ToLower(strings.TrimSpace(user.Email))
+
+	// Persist subscription log (ignoring unique constraint failures if already present)
+	_ = h.db.CreateEmailSubscription(&models.EmailSubscription{
+		Email: cleanEmail,
+	})
+
+	// Send gorgeous luxury welcome catalog template email asynchronously
+	h.WelcomeNewsletterSubscription(c, []string{cleanEmail})
+
 	utils.SendResponse(c, utils.Response{
 		Status:  http.StatusCreated,
 		Success: true,
@@ -118,7 +125,7 @@ func (h *AuthHandler) SignUp(c *gin.Context) {
 }
 
 // SignIn handles user login
-func (h *AuthHandler) SignIn(c *gin.Context) {
+func (h *Handler) SignIn(c *gin.Context) {
 	var req SignInRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.SendResponse(c, utils.Response{
@@ -159,7 +166,7 @@ func (h *AuthHandler) SignIn(c *gin.Context) {
 		"iat":     time.Now().Unix(),
 	})
 
-	tokenString, err := token.SignedString([]byte(h.jwtSecret))
+	tokenString, err := token.SignedString([]byte(h.AuthHandler.jwtSecret))
 	if err != nil {
 		utils.SendResponse(c, utils.Response{
 			Status:  http.StatusInternalServerError,
@@ -180,7 +187,7 @@ func (h *AuthHandler) SignIn(c *gin.Context) {
 }
 
 // GetMe returns current user info
-func (h *AuthHandler) GetMe(c *gin.Context) {
+func (h *Handler) GetMe(c *gin.Context) {
 	userID := c.GetString("user_id")
 
 	user, err := h.db.GetUserByID(userID)
@@ -203,7 +210,7 @@ func (h *AuthHandler) GetMe(c *gin.Context) {
 }
 
 // UpdateUserAccount updates current user account info
-func (h *AuthHandler) UpdateUserAccount(c *gin.Context) {
+func (h *Handler) UpdateUserAccount(c *gin.Context) {
 	var req struct {
 		ID          string `json:"id"`
 		FirstName   string `json:"first_name"`
@@ -255,7 +262,7 @@ func (h *AuthHandler) UpdateUserAccount(c *gin.Context) {
 }
 
 // ChangeUserPassword changes current user password
-func (h *AuthHandler) ChangeUserPassword(c *gin.Context) {
+func (h *Handler) ChangeUserPassword(c *gin.Context) {
 	userID := c.GetString("user_id")
 
 	var req struct {
