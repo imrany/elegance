@@ -19,6 +19,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/imrany/elegance/internal/database"
 	"github.com/imrany/elegance/internal/models"
+	"github.com/imrany/elegance/pkg/mailer"
 	"github.com/imrany/elegance/pkg/utils"
 	"github.com/spf13/viper"
 	"golang.org/x/crypto/bcrypt"
@@ -894,6 +895,52 @@ func (h *AdminHandler) UpdateWebsiteSetting(c *gin.Context) {
 			}
 		}
 	}
+
+	testConnctionAndSetIsConfigured := func(currentValue string, newValue string) error {
+		var current map[string]any
+		var new map[string]any
+
+		if err := json.Unmarshal([]byte(currentValue), &current); err != nil {
+			log.Printf("Failed to unmarshal existing JSON for cleanup (%s): %v", key, err)
+			return fmt.Errorf("failed to unmarshal existing JSON for cleanup: %w", err)
+		}
+		if err := json.Unmarshal([]byte(newValue), &new); err != nil {
+			log.Printf("Failed to unmarshal new JSON for cleanup (%s): %v", key, err)
+			return fmt.Errorf("failed to unmarshal new JSON for cleanup: %w", err)
+		}
+
+		var smtpConfig mailer.SmtpConfig
+		// Assuming the 'new' map contains the fields for SmtpConfig
+		// We need to marshal it back to JSON and then unmarshal into the struct
+		newJSON, err := json.Marshal(new)
+		if err != nil {
+			log.Printf("Failed to marshal new config for SMTP test: %v", err)
+			return fmt.Errorf("failed to marshal new config for SMTP test: %w", err)
+		}
+		if err := json.Unmarshal(newJSON, &smtpConfig); err != nil {
+			log.Printf("Failed to unmarshal new config into SmtpConfig: %v", err)
+			return fmt.Errorf("failed to unmarshal new config into SmtpConfig: %w", err)
+		}
+
+		_, err = mailer.TestConnection(&smtpConfig)
+		if err != nil {
+			log.Printf("Failed to test SMTP configuration: %v", err)
+			// Return an error to the caller so they can send an appropriate response
+			return fmt.Errorf("failed to test SMTP configuration: %w", err)
+		}
+
+		// If the connection test is successful, update "is_configured" to true
+		new["is_configured"] = true
+
+		// Re-marshal the 'new' map to update req.Value with the new 'is_configured' status
+		updatedNewValue, err := json.Marshal(new)
+		if err != nil {
+			log.Printf("Failed to re-marshal updated SMTP config: %v", err)
+			return fmt.Errorf("failed to re-marshal updated SMTP config: %w", err)
+		}
+		req.Value = string(updatedNewValue) // Update req.Value with the modified JSON string
+		return nil
+	}
 	// --- End Helper Function ---
 
 	// Check if the current setting has an image we need to potentially delete
@@ -903,6 +950,15 @@ func (h *AdminHandler) UpdateWebsiteSetting(c *gin.Context) {
 		currentValue := strings.TrimSpace(setting.Value)
 
 		switch key {
+		case "smtp":
+			if err := testConnctionAndSetIsConfigured(currentValue, req.Value); err != nil {
+				utils.SendResponse(c, utils.Response{
+					Status:  http.StatusInternalServerError,
+					Success: false,
+					Message: err.Error(),
+				})
+				return
+			}
 		case "store":
 			cleanupImage(currentValue, req.Value, "logo")
 		case "hero":

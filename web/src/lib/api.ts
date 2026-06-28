@@ -28,6 +28,16 @@ export interface HeroType {
   title: string;
 }
 
+export interface EmailPayload {
+  to: string[];
+  cc?: string[];
+  bcc?: string[];
+  reply_to?: string;
+  subject: string;
+  body_text?: string;
+  body_html?: string;
+}
+
 export interface AboutType {
   description: string;
   features: string[];
@@ -90,13 +100,14 @@ export interface StoreType {
 }
 
 export interface SmtpType {
-  enabled: boolean;
+  is_configured: boolean;
+  encryption: string;
   from_email: string;
   from_name: string;
   username: string;
   password: string;
-  smtp_host: string;
-  smtp_port: number;
+  host: string;
+  port: number;
 }
 
 export interface WhatsappType {
@@ -238,8 +249,7 @@ export type SiteSettingKeys = {
 };
 
 export type SiteSettingKey =
-  | SiteSettingKeys["WHATSAPP" | "EMAIL" | "STORE" | "SOCIAL_MEDIA"]
-  | string;
+  SiteSettingKeys["WHATSAPP" | "EMAIL" | "STORE" | "SOCIAL_MEDIA"] | string;
 
 export type SiteSettingValue =
   | string
@@ -255,6 +265,12 @@ export interface SiteSetting {
   value: SiteSettingValue;
   createdAt: string; // Assuming ISO 8601 string for time.Time
   updatedAt: string; // Assuming ISO 8601 string for time.Time
+}
+
+export interface EmailSubscription {
+  id: string;
+  email: string;
+  created_at: string;
 }
 
 export interface ProductFilters {
@@ -633,6 +649,38 @@ class ApiClient {
   async deleteUser(userId: string) {
     return this.request<void>(`/api/admin/users/${userId}`, {
       method: "DELETE",
+    });
+  }
+
+  // smtp management
+  async testSmtpConnection() {
+    return this.request<void>(`/api/admin/smtp/test`, {
+      method: "GET",
+    });
+  }
+
+  async getSubscriptions(): Promise<EmailSubscription[]> {
+    const res = await fetch(`${API_URL}/api/email/subscriptions`);
+    if (!res.ok) throw new Error("Could not fetch subscriptions list");
+    const json = await res.json();
+    return json.data;
+  }
+
+  async unsubscribeEmail(email: string): Promise<void> {
+    const res = await fetch(
+      `${API_URL}/api/email/unsubscribe/${encodeURIComponent(email)}`,
+      {
+        method: "DELETE",
+      },
+    );
+    if (!res.ok)
+      throw new Error("Failed to delete backend subscription record");
+  }
+
+  async composeEmail(data: EmailPayload) {
+    return this.request<void>(`/api/admin/smtp/compose`, {
+      method: "POST",
+      body: JSON.stringify(data),
     });
   }
 

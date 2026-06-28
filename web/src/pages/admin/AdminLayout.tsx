@@ -18,21 +18,6 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useGeneralContext } from "@/contexts/GeneralContext";
 
-const navItems = [
-  { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
-  { name: "Account", href: "/admin/account", icon: User },
-  { name: "Products", href: "/admin/products", icon: Package },
-  { name: "Orders", href: "/admin/orders", icon: ShoppingCart },
-  { name: "Users", href: "/admin/users", icon: UsersRound },
-  {
-    name: "Email Subscriptions",
-    href: "/admin/email-subscriptions",
-    icon: MailQuestionMarkIcon,
-  },
-  { name: "Settings", href: "/admin/settings", icon: Settings },
-  { name: "Website Builder", href: "/admin/website-builder", icon: ToolCase },
-];
-
 export default function AdminLayout() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -41,6 +26,23 @@ export default function AdminLayout() {
   const { websiteConfig } = useGeneralContext();
   const store = websiteConfig?.store;
   const siteName = store.name || "[Your Store Name]";
+  const smtp = websiteConfig?.smtp;
+
+  const navItems = [
+    { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
+    { name: "Account", href: "/admin/account", icon: User },
+    { name: "Products", href: "/admin/products", icon: Package },
+    { name: "Orders", href: "/admin/orders", icon: ShoppingCart },
+    { name: "Users", href: "/admin/users", icon: UsersRound },
+    smtp &&
+      smtp.is_configured && {
+        name: "Email Subscriptions",
+        href: "/admin/email-subscriptions",
+        icon: MailQuestionMarkIcon,
+      },
+    { name: "Settings", href: "/admin/settings", icon: Settings },
+    { name: "Website Builder", href: "/admin/website-builder", icon: ToolCase },
+  ];
 
   useEffect(() => {
     if (!isLoading) {

@@ -1,7 +1,16 @@
 import { useState } from "react";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Search, Mail, Trash2Icon, Download, UserCheck } from "lucide-react";
+import {
+  Search,
+  Mail,
+  Download,
+  UserCheck,
+  MoreVertical,
+  Users,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -15,35 +24,21 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
-import { API_URL } from "@/lib/api";
+import { EmailPayload, EmailSubscription, api } from "@/lib/api";
 import { Spinner } from "@/components/ui/spinner";
-
-// Local types matching your Go structural backend models
-interface EmailSubscription {
-  id: string;
-  email: string;
-  created_at: string;
-}
-
-// Mock API layer—Replace this with your real axios/fetch configuration path (e.g., `@/lib/api`)
-const emailApi = {
-  getSubscriptions: async (): Promise<EmailSubscription[]> => {
-    const res = await fetch(`${API_URL}/api/email/subscriptions`);
-    if (!res.ok) throw new Error("Could not fetch subscriptions list");
-    const json = await res.json();
-    return json.data;
-  },
-  unsubscribeEmail: async (email: string): Promise<void> => {
-    const res = await fetch(
-      `${API_URL}/api/email/unsubscribe/${encodeURIComponent(email)}`,
-      {
-        method: "DELETE",
-      },
-    );
-    if (!res.ok)
-      throw new Error("Failed to delete backend subscription record");
-  },
-};
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import SidePanel, {
+  PanelBody,
+  PanelDescription,
+  PanelHeader,
+  PanelTitle,
+} from "@/components/common/SidePanel";
 
 export default function EmailSubscriptionsAdminPage() {
   const queryClient = useQueryClient();
@@ -52,28 +47,56 @@ export default function EmailSubscriptionsAdminPage() {
     null,
   );
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isSelectedSub, setIsSelectedSub] = useState(false);
 
-  // Fetch subscriptions hook
+  // Track checked row IDs for dynamic target campaigns
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isCustomGroup, setIsCustomGroup] = useState(false);
+
+  // Fetch subscriptions
   const { data: subscriptions, isLoading } = useQuery({
     queryKey: ["admin-email-subscriptions"],
-    queryFn: emailApi.getSubscriptions,
+    queryFn: api.getSubscriptions,
   });
 
-  // Delete subscription mutation
+  // Compose / Send Email Mutation
+  const composeEmailMutation = useMutation({
+    mutationFn: async (payload: EmailPayload) => {
+      await api.composeEmail(payload);
+    },
+    onSuccess: () => {
+      setIsSelectedSub(false);
+      setIsCustomGroup(false);
+      setSelectedIds([]);
+      setSelectedSub(null);
+      toast.success("Emails successfully pushed to outbound pipeline");
+    },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to dispatch outgoing campaign");
+    },
+  });
+
+  // Remove Subscriber Mutation
   const deleteSubscriptionMutation = useMutation({
     mutationFn: async (email: string) => {
-      await emailApi.unsubscribeEmail(email);
+      await api.unsubscribeEmail(email);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["admin-email-subscriptions"],
       });
+      // Clear checkbox state if the deleted subscriber was selected
+      if (selectedSub) {
+        setSelectedIds((prev) => prev.filter((id) => id !== selectedSub.id));
+      }
       setIsDeleteDialogOpen(false);
       setSelectedSub(null);
+      toast.success("Subscriber successfully removed from your system");
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onError: (error: any) => {
-      toast.error(error.message || "Failed to delete subscription");
+      toast.error(error.message || "Failed to remove subscription");
     },
   });
 
@@ -83,34 +106,41 @@ export default function EmailSubscriptionsAdminPage() {
     }
   };
 
-  // Dynamic filter operation
+  // Toggle individual items
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  };
+
+  // Toggle select all visible items
+  const toggleSelectAll = () => {
+    if (selectedIds.length === filteredSubs.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredSubs.map((sub) => sub.id));
+    }
+  };
+
   const filteredSubs =
     subscriptions?.filter((sub) =>
       sub.email.toLowerCase().includes(search.toLowerCase()),
     ) || [];
 
-  // Helper utility to download records as a clean CSV
-  const exportToCSV = () => {
-    if (!subscriptions || subscriptions.length === 0) return;
-    const headers = ["ID,Email,Subscribed At\n"];
-    const rows = subscriptions.map(
-      (sub) => `"${sub.id}","${sub.email}","${sub.created_at}"`,
-    );
-    const blob = new Blob([headers.concat(rows.join("\n")).join("")], {
-      type: "text/csv;charset=utf-8;",
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute(
-      "download",
-      `newsletter_subscribers_${format(new Date(), "yyyy-MM-dd")}.csv`,
-    );
-    link.click();
+  const getSelectedEmails = (): string[] => {
+    if (isCustomGroup) {
+      return (
+        subscriptions
+          ?.filter((s) => selectedIds.includes(s.id))
+          .map((s) => s.email) || []
+      );
+    }
+    return [selectedSub?.email || ""];
   };
 
   return (
     <div className="space-y-6">
+      {/* Top Header Section */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-serif text-2xl font-light text-foreground md:text-3xl">
@@ -120,19 +150,41 @@ export default function EmailSubscriptionsAdminPage() {
             Manage your audience registry and newsletter subscribers
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={exportToCSV}
-          disabled={isLoading || !subscriptions || subscriptions.length === 0}
-          className="w-full sm:w-auto"
-        >
-          <Download className="mr-2 h-4 w-4" />
-          Export CSV
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          {selectedIds.length > 0 ? (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => {
+                setIsCustomGroup(true);
+                setSelectedSub(null);
+                setIsSelectedSub(true);
+              }}
+              className="w-full sm:w-auto bg-accent text-accent-foreground"
+            >
+              <Mail className="mr-2 h-4 w-4" />
+              Email Selected ({selectedIds.length})
+            </Button>
+          ) : (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => {
+                setSelectedIds(filteredSubs.map((s) => s.id));
+                setIsCustomGroup(true);
+                setIsSelectedSub(true);
+              }}
+              disabled={isLoading || filteredSubs.length === 0}
+              className="w-full sm:w-auto"
+            >
+              <Users className="mr-2 h-4 w-4" />
+              Broadcast All
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Control Actions & Filtering */}
+      {/* Control Actions & Filtering Bar */}
       {!isLoading && subscriptions && (
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center justify-between">
           <div className="relative flex-1 sm:max-w-sm">
@@ -145,20 +197,30 @@ export default function EmailSubscriptionsAdminPage() {
             />
           </div>
           <div className="text-sm text-muted-foreground">
-            Total Audience Size:{" "}
+            Selected:{" "}
             <span className="font-medium text-foreground">
-              {subscriptions.length}
-            </span>
+              {selectedIds.length}
+            </span>{" "}
+            / Total: {subscriptions.length}
           </div>
         </div>
       )}
 
-      {/* Subscriptions Grid / Table Layout */}
+      {/* Main Subscriptions Table */}
       <div className="rounded-lg border border-border bg-background">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-border bg-secondary/50">
+                <th className="w-12 px-4 py-3 text-left">
+                  <Checkbox
+                    checked={
+                      filteredSubs.length > 0 &&
+                      selectedIds.length === filteredSubs.length
+                    }
+                    onCheckedChange={toggleSelectAll}
+                  />
+                </th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
                   Email
                 </th>
@@ -176,41 +238,42 @@ export default function EmailSubscriptionsAdminPage() {
             <tbody className="divide-y divide-border">
               {isLoading ? (
                 <tr>
-                  <td
-                    colSpan={4}
-                    className="px-4 py-8 text-center text-muted-foreground"
-                  >
+                  <td colSpan={5} className="px-4 py-8 text-center">
                     <Spinner className="size-4 animate-spin" />
                   </td>
                 </tr>
               ) : filteredSubs.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={4}
+                    colSpan={5}
                     className="px-4 py-8 text-center text-muted-foreground"
                   >
-                    No matching subscribers located.
+                    No subscribers found.
                   </td>
                 </tr>
               ) : (
                 filteredSubs.map((sub) => (
                   <tr
                     key={sub.id}
-                    className="hover:bg-secondary/30 transition-colors"
+                    className={`hover:bg-secondary/30 transition-colors ${selectedIds.includes(sub.id) && "bg-secondary/20"}`}
                   >
+                    <td className="px-4 py-3">
+                      <Checkbox
+                        checked={selectedIds.includes(sub.id)}
+                        onCheckedChange={() => toggleSelect(sub.id)}
+                      />
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <Mail className="h-4 w-4 text-muted-foreground" />
                         <span className="font-medium text-foreground">
-                          {sub.email.length > 30
-                            ? `${sub.email.slice(0, 30)}...`
-                            : sub.email}
+                          {sub.email}
                         </span>
                       </div>
                     </td>
                     <td className="px-4 py-3">
                       <Badge
-                        className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 capitalize border-none"
+                        className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 capitalize border-none"
                         variant="outline"
                       >
                         <UserCheck className="mr-1 h-3 w-3" />
@@ -218,25 +281,36 @@ export default function EmailSubscriptionsAdminPage() {
                       </Badge>
                     </td>
                     <td className="px-4 py-3 text-sm text-muted-foreground">
-                      {format(
-                        new Date(sub.created_at),
-                        "MMM d, yyyy 'at' h:mm a",
-                      )}
+                      {format(new Date(sub.created_at), "MMM d, yyyy")}
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex justify-end">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                          onClick={() => {
-                            setSelectedSub(sub);
-                            setIsDeleteDialogOpen(true);
-                          }}
-                        >
-                          <Trash2Icon className="h-4 w-4" />
-                        </Button>
-                      </div>
+                    <td className="px-4 py-3 text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setIsCustomGroup(false);
+                              setSelectedSub(sub);
+                              setIsSelectedSub(true);
+                            }}
+                          >
+                            Send Individual Email
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setSelectedSub(sub);
+                              setIsDeleteDialogOpen(true);
+                            }}
+                            className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                          >
+                            Remove Subscriber
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </td>
                   </tr>
                 ))
@@ -289,6 +363,127 @@ export default function EmailSubscriptionsAdminPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Compose Panel Wrapper */}
+      {isSelectedSub && (
+        <SidePanel
+          isOpen={isSelectedSub}
+          onOpenChange={(open) => {
+            setIsSelectedSub(open);
+            if (!open) {
+              setIsCustomGroup(false);
+              setSelectedSub(null);
+            }
+          }}
+        >
+          <PanelHeader>
+            <PanelTitle>
+              {isCustomGroup ? "Send Dynamic Campaign" : "Compose Message"}
+            </PanelTitle>
+            <PanelDescription>
+              {isCustomGroup
+                ? `You are broadcasting this message to ${getSelectedEmails().length} selected recipients.`
+                : `Sending a direct message to ${selectedSub?.email}`}
+            </PanelDescription>
+          </PanelHeader>
+
+          <PanelBody>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                const subject = formData.get("subject") as string;
+                const body = formData.get("body") as string;
+
+                const recipients = getSelectedEmails();
+                if (recipients.length === 0) {
+                  toast.error("Please pick at least one recipient.");
+                  return;
+                }
+
+                const payload: EmailPayload = {
+                  to: recipients,
+                  subject,
+                };
+
+                if (/<[a-z][\s\S]*>/i.test(body)) {
+                  payload.body_html = body;
+                } else {
+                  payload.body_text = body;
+                }
+
+                composeEmailMutation.mutate(payload);
+              }}
+              className="flex flex-col gap-6 h-full justify-between"
+            >
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                    To
+                  </Label>
+                  <Input
+                    value={
+                      isCustomGroup
+                        ? `${getSelectedEmails().length} Targeted Recipients Selected`
+                        : selectedSub?.email || ""
+                    }
+                    disabled
+                    className="bg-secondary/50 font-medium"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="subject"
+                    className="text-xs uppercase tracking-wider text-muted-foreground"
+                  >
+                    Subject Line *
+                  </Label>
+                  <Input
+                    id="subject"
+                    name="subject"
+                    placeholder="Enter subject line..."
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="body"
+                    className="text-xs uppercase tracking-wider text-muted-foreground"
+                  >
+                    Message Body *
+                  </Label>
+                  <Textarea
+                    id="body"
+                    name="body"
+                    placeholder="Type your message text or HTML layout..."
+                    rows={12}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 border-t border-border pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setIsSelectedSub(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" className="w-full">
+                  <Mail className="h-4 w-4 mr-2" />
+                  {composeEmailMutation.isPending
+                    ? "Sending..."
+                    : "Dispatch Email"}
+                </Button>
+              </div>
+            </form>
+          </PanelBody>
+        </SidePanel>
+      )}
     </div>
   );
 }

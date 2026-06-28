@@ -17,7 +17,7 @@ INSERT INTO website_settings_config (key, value) VALUES
 ('seo', '{ "title": "My Store - Quality Products", "description": "Shop the best products at amazing prices", "keywords": "store, shop, products, ecommerce", "og_image": "", "favicon": "" }'),
 ('social', '{ "facebook": "", "twitter": "", "instagram": "", "linkedin": "", "youtube": "", "tiktok": "" }'),
 ('store', '{"name": "ÉLÉGANCE", "currency": "KES", "free_delivery_threshold": 10000, "logo": "", "announcement": "Free Delivery on Orders Over KES 10,000", "description": "Discover the finest luxury fashion in Kenya, crafted with passion and precision."}'),
-('smtp', '{"enabled": false, "from_email": "", "from_name": "", "username":"", "password": "", "smtp_host": "", "smtp_port": ""}'),
+('smtp', '{"is_configured": false, "Encryption":"tls", "from_email": "", "from_name": "", "username":"", "password": "", "host": "", "port": ""}'),
 ('whatsapp', '{"phone": "+254700000000", "message": "Hello! I am interested in your products."}'),
 ('mpesa', '{"type": "till", "phone": "+254700000000", "till_number": "123456", "paybill_number": "", "account_number": ""}')
 ON CONFLICT (key) DO NOTHING;

@@ -241,6 +241,10 @@ func (s *Server) setupRoutes() {
 			admin.POST("/pages/:id/unpublish", s.handler.UnpublishPage)
 			admin.POST("/pages/:id/duplicate", s.handler.DuplicatePage)
 			admin.POST("/pages/:id/reorder-sections", s.handler.ReorderPageSections)
+
+			// SMTP management
+			admin.POST("/smtp/compose", s.handler.ComposeEmail)
+			admin.GET("/smtp/test", s.handler.TestSmtpConnection)
 		}
 	}
 

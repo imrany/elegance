@@ -28,7 +28,13 @@ import {
 import { useGeneralContext } from "@/contexts/GeneralContext";
 import { SmtpType } from "../../lib/api";
 import { useSearchParams } from "react-router-dom";
-
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 export default function SettingsPage() {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -50,15 +56,16 @@ export default function SettingsPage() {
     smtp
       ? {
           ...smtp,
-          smtp_port: Number(smtp?.smtp_port),
+          port: Number(smtp?.port),
         }
       : {
-          enabled: false,
+          is_configured: false,
           from_email: "example@example.com",
           username: "example@gmail.com",
           password: "",
-          smtp_host: "smtp.gmail.com",
-          smtp_port: 587,
+          host: "smtp.gmail.com",
+          port: 587,
+          encryption: "tls",
           from_name: "",
         },
   );
@@ -76,15 +83,16 @@ export default function SettingsPage() {
   // Initialize email enabled state
   useEffect(() => {
     setSmtpConfig({
-      enabled: smtp?.enabled ?? false,
+      is_configured: smtp?.is_configured ?? false,
       from_email: smtp?.from_email ?? "example@example.com",
       username: smtp?.username ?? "example@gmail.com",
       password: smtp?.password ?? "",
-      smtp_host: smtp?.smtp_host ?? "smtp.gmail.com",
-      smtp_port: Number(smtp?.smtp_port) || 587,
+      host: smtp?.host ?? "smtp.gmail.com",
+      port: Number(smtp?.port) || 587,
+      encryption: smtp?.encryption ?? "tls",
       from_name: smtp?.from_name ?? "",
     });
-  }, [smtp?.enabled, smtp?.from_email]);
+  }, [smtp?.is_configured, smtp?.from_email]);
 
   // Upload image mutation
   const uploadImageMutation = useMutation({
@@ -145,25 +153,24 @@ export default function SettingsPage() {
   const handleEmailUpdate = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (smtpConfig.enabled) {
-      if (
-        !smtpConfig.from_email ||
-        !smtpConfig.smtp_host ||
-        !smtpConfig.from_name ||
-        !smtpConfig.username ||
-        !smtpConfig.password
-      ) {
-        toast.error("Please fill in all required fields when email is enabled");
-        return;
-      }
+    if (
+      !smtpConfig.from_email ||
+      !smtpConfig.host ||
+      !smtpConfig.from_name ||
+      !smtpConfig.username ||
+      !smtpConfig.password ||
+      !smtpConfig.encryption
+    ) {
+      toast.error("Please fill in all required fields when email is enabled");
+      return;
     }
 
     saveWebsiteConfig("smtp", {
-      enabled: smtpConfig.enabled,
       from_email: smtpConfig.from_email,
       username: smtpConfig.username,
-      smtp_port: Number(smtpConfig.smtp_port),
-      smtp_host: smtpConfig.smtp_host,
+      port: Number(smtpConfig.port),
+      host: smtpConfig.host,
+      encryption: smtpConfig.encryption,
       password: smtpConfig.password,
       from_name: smtpConfig.from_name,
     });
@@ -200,14 +207,14 @@ export default function SettingsPage() {
 
   // Check if email form is valid
   const isEmailFormValid = () => {
-    if (!smtpConfig.enabled) return true;
     return (
       smtpConfig.from_email?.trim() !== "" &&
       smtpConfig.from_name?.trim() !== "" &&
-      smtpConfig.smtp_host?.trim() !== "" &&
+      smtpConfig.host?.trim() !== "" &&
       smtpConfig.username?.trim() !== "" &&
       smtpConfig.password?.trim() !== "" &&
-      !!smtpConfig.smtp_port
+      smtpConfig.encryption?.trim() !== "" &&
+      !!smtpConfig.port
     );
   };
   return (
@@ -667,25 +674,6 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleEmailUpdate} className="space-y-6">
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="enabled"
-                    name="enabled"
-                    checked={smtpConfig.enabled}
-                    onChange={(e) =>
-                      setSmtpConfig((prev) => ({
-                        ...prev,
-                        enabled: e.target.checked,
-                      }))
-                    }
-                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                  />
-                  <Label htmlFor="enabled" className="cursor-pointer">
-                    Enable email notifications
-                  </Label>
-                </div>
-
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="from_name">From Name</Label>
@@ -700,7 +688,7 @@ export default function SettingsPage() {
                         }))
                       }
                       placeholder="My Awesome Store"
-                      required={smtpConfig.enabled}
+                      required
                     />
                   </div>
 
@@ -718,44 +706,44 @@ export default function SettingsPage() {
                         }))
                       }
                       placeholder="example@gmail.com"
-                      required={smtpConfig.enabled}
+                      required
                     />
                   </div>
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-3">
                   <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="smtp_host">SMTP Host</Label>
+                    <Label htmlFor="host">SMTP Host</Label>
                     <Input
-                      id="smtp_host"
-                      name="smtp_host"
-                      value={smtpConfig.smtp_host}
+                      id="host"
+                      name="host"
+                      value={smtpConfig.host}
                       onChange={(e) =>
                         setSmtpConfig((prev) => ({
                           ...prev,
-                          smtp_host: e.target.value,
+                          host: e.target.value,
                         }))
                       }
                       placeholder="smtp.gmail.com"
-                      required={smtpConfig.enabled}
+                      required
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="smtp_port">SMTP Port</Label>
+                    <Label htmlFor="port">SMTP Port</Label>
                     <Input
-                      id="smtp_port"
-                      name="smtp_port"
+                      id="port"
+                      name="port"
                       type="number"
-                      value={smtpConfig.smtp_port || ""}
+                      value={smtpConfig.port || ""}
                       onChange={(e) =>
                         setSmtpConfig((prev) => ({
                           ...prev,
-                          smtp_port: Number(e.target.value),
+                          port: Number(e.target.value),
                         }))
                       }
                       placeholder="587"
-                      required={smtpConfig.enabled}
+                      required
                     />
                   </div>
                 </div>
@@ -774,7 +762,7 @@ export default function SettingsPage() {
                         }))
                       }
                       placeholder="example@gmail.com"
-                      required={smtpConfig.enabled}
+                      required
                     />
                   </div>
 
@@ -792,11 +780,35 @@ export default function SettingsPage() {
                         }))
                       }
                       placeholder="••••••••••••"
-                      required={smtpConfig.enabled}
+                      required
                     />
                   </div>
                 </div>
 
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="encryption">Encryption</Label>
+                    <Select
+                      name="encryption"
+                      value={smtpConfig.encryption}
+                      onValueChange={(value) =>
+                        setSmtpConfig((prev) => ({
+                          ...prev,
+                          encryption: value,
+                        }))
+                      }
+                      required
+                    >
+                      <SelectTrigger id="encryption" className="w-full">
+                        <SelectValue placeholder="Select encryption type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="tls">TLS (STARTTLS)</SelectItem>
+                        <SelectItem value="ssl">SSL (Implicit TLS)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
                 <Button
                   type="submit"
                   disabled={!isEmailFormValid() || $saveWebsiteConfig.isPending}

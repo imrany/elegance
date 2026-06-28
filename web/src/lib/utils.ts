@@ -372,13 +372,14 @@ export const DEFAULT_CONFIG: SectionData = {
       "Discover the finest luxury fashion in Kenya, crafted with passion and precision.",
   },
   smtp: {
-    enabled: false,
+    is_configured: false,
     from_email: "",
     from_name: "",
     username: "",
     password: "",
-    smtp_host: "",
-    smtp_port: 587,
+    host: "",
+    port: 587,
+    encryption: "tls",
   },
   whatsapp: {
     phone: "",
