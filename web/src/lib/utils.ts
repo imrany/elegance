@@ -45,6 +45,12 @@ export function formatShortDate(date: string | Date | null | undefined) {
   });
 }
 
+export function formatTime(dateStr: string) {
+  if (!dateStr) return "";
+  const date = new Date(dateStr);
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
 export const statusColors: Record<string, string> = {
   pending: "bg-yellow-500/10 text-yellow-600",
   processing: "bg-blue-500/10 text-blue-600",

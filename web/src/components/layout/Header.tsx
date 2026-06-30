@@ -9,6 +9,16 @@ import {
   UserCog,
   LogIn,
   Settings,
+  Bell,
+  BellRing,
+  BellOff,
+  CheckCheck,
+  Briefcase,
+  MailOpen,
+  Mail,
+  FileText,
+  Trash2,
+  Info,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -19,12 +29,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { useEffect, useState } from "react";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOrder } from "@/contexts/OrderContext";
 import { useGeneralContext } from "@/contexts/GeneralContext";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { api, EventType, formatTime, Notification } from "@/lib";
 
 export function Header() {
   const [isOpen, setIsOpen] = useState(false);
@@ -35,6 +53,7 @@ export function Header() {
   const navigate = useNavigate();
   const { categories, websiteConfig } = useGeneralContext();
   const store = websiteConfig?.store;
+
   const navLinks = [
     ...(categories
       ?.slice(0, 3)
@@ -49,40 +68,41 @@ export function Header() {
   const {
     isSubscribed,
     subscribe,
-    unsubscribe,
     isSupported,
     checkSubscriptionStatus,
     permissionStatus,
+    setPermissionStatus,
   } = usePushNotifications();
 
-  const showNotifications = ref(false);
-  const notifications = ref<any[]>([]);
-  const unreadCount = ref(0);
-  let pollInterval: ReturnType<typeof setInterval> | null = null;
+  // --- Fixed Vue refs converted to React state ---
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
   async function fetchNotifications() {
     try {
-      if (!isSubscribed.value) return;
-      const [notifs, count] = await Promise.all([
-        api.notifications.list(),
-        api.notifications.unreadCount(),
+      if (!isSubscribed) return;
+      const [notifs, countData] = await Promise.all([
+        api.listNotifications(),
+        api.unreadNotifications(user.id),
       ]);
-      notifications.value = notifs.slice(0, 10);
-      unreadCount.value = count.count;
+      setNotifications(notifs.slice(0, 10));
+      setUnreadCount(countData);
     } catch {
       // silently fail
     }
   }
 
   async function handleSubscribe() {
-    if (user.value?.id) {
-      await subscribe(user.value.id);
+    if (user?.id) {
+      await subscribe(user.id);
       await fetchNotifications();
     }
   }
 
   async function markAsRead(id: string) {
     try {
-      await api.notifications.markRead(id);
+      await api.markAsReadNotifications(id);
       await fetchNotifications();
     } catch {
       // silently fail
@@ -91,16 +111,17 @@ export function Header() {
 
   async function markAllRead() {
     try {
-      await api.notifications.markAllRead();
+      await api.markAsReadNotifications();
       await fetchNotifications();
     } catch {
       // silently fail
     }
   }
 
-  async function deleteNotification(id: string) {
+  async function deleteNotification(id: string, e: React.MouseEvent) {
+    e.stopPropagation(); // Stop click from triggering item layout events
     try {
-      await api.notifications.delete(id);
+      await api.deleteNotification(id);
       await fetchNotifications();
     } catch {
       // silently fail
@@ -108,14 +129,11 @@ export function Header() {
   }
 
   function toggleNotifications() {
-    showNotifications.value = !showNotifications.value;
-    if (showNotifications.value) {
+    const nextState = !showNotifications;
+    setShowNotifications(nextState);
+    if (nextState) {
       fetchNotifications();
     }
-  }
-
-  function closeNotifications() {
-    showNotifications.value = false;
   }
 
   const eventColors: Record<string, string> = {
@@ -125,24 +143,43 @@ export function Header() {
     application_status_change: "bg-green-50 text-green-700",
   };
 
+  const getEventIcon = (eventType: EventType) => {
+    switch (eventType) {
+      case "new_application":
+        return <Briefcase size={14} />;
+      case "new_subscriber":
+        return <MailOpen size={14} />;
+      case "new_message":
+        return <Mail size={14} />;
+      default:
+        return <FileText size={14} />;
+    }
+  };
+
+  // --- Fixed Effect lifecycle hooks ---
   useEffect(() => {
-    // Await the status check BEFORE polling for notifications
-    if (isSupported.value) {
-      await checkSubscriptionStatus();
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
+
+    async function initNotifications() {
+      if (isSupported) {
+        await checkSubscriptionStatus();
+      }
+      await fetchNotifications();
+      pollInterval = setInterval(fetchNotifications, 30000);
     }
 
-    await fetchNotifications();
-    pollInterval = setInterval(fetchNotifications, 30000);
-  }, []);
+    initNotifications();
 
-  onUnmounted(() => {
-    if (pollInterval) clearInterval(pollInterval);
-  });
+    return () => {
+      if (pollInterval) clearInterval(pollInterval);
+    };
+  }, [isSupported, isSubscribed]);
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       {/* Top bar */}
       <div className="bg-primary text-primary-foreground">
-        {store.announcement && (
+        {store?.announcement && (
           <div className="container text-center flex h-8 items-center justify-center text-xs tracking-elegant">
             {store.announcement.length > 45
               ? store.announcement.slice(0, 44) + "..."
@@ -236,10 +273,10 @@ export function Header() {
 
         {/* Actions */}
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-          {/* Search: Hidden on XS, shown on SM+ */}
           <Button variant="ghost" size="icon" className="hidden sm:flex">
             <Search className="h-5 w-5" />
           </Button>
+
           {user ? (
             <div className="flex items-center gap-1 sm:gap-2">
               <DropdownMenu>
@@ -314,7 +351,7 @@ export function Header() {
             </Button>
           )}
 
-          {/* Cart: Always visible */}
+          {/* Cart */}
           <Button variant="ghost" size="icon" className="relative" asChild>
             <Link to="/cart">
               <ShoppingBag className="h-5 w-5" />
@@ -326,183 +363,144 @@ export function Header() {
             </Link>
           </Button>
 
-          <!-- Notification Bell -->
-          <div v-if="isSubscribed" class="relative">
-              <button
-                  @click="toggleNotifications"
-                  class="relative p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors"
+          {/* Fixed React Notification Bell Dropdown layout */}
+          {isSubscribed ? (
+            <div className="relative">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleNotifications}
+                className="relative text-muted-foreground hover:text-foreground"
               >
-                  <Bell :size="20" />
-                  <span
-                      v-if="unreadCount > 0"
-                      class="absolute -top-0.5 -right-0.5 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center"
-                  >
-                      {{ unreadCount > 9 ? "9+" : unreadCount }}
+                <Bell className="h-5 w-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-destructive text-destructive-foreground text-[9px] font-bold rounded-full flex items-center justify-center">
+                    {unreadCount > 9 ? "9+" : unreadCount}
                   </span>
-              </button>
+                )}
+              </Button>
 
-              <!-- Notification Dropdown -->
-              <div
-                  v-if="showNotifications"
-                  class="absolute right-0 top-12 w-[calc(100vw-2rem)] sm:w-96 bg-white rounded-xl border border-gray-200 shadow-xl z-50 overflow-hidden"
-                  @click.stop
-              >
+              {showNotifications && (
+                <>
+                  {/* Click outside backdrop layer wrapper */}
                   <div
-                      class="flex items-center justify-between px-4 py-3 border-b border-gray-100"
-                  >
-                      <h3 class="text-sm font-bold text-gray-900">
-                          Notifications
-                      </h3>
-                      <button
-                          v-if="unreadCount > 0"
-                          @click="markAllRead"
-                          class="flex items-center gap-1 text-xs text-teal-600 hover:text-teal-700 transition-colors"
-                      >
-                          <CheckCheck :size="12" /> Mark all read
-                      </button>
-                  </div>
-                  <div
-                      class="max-h-[60vh] sm:max-h-80 overflow-y-auto divide-y divide-gray-50"
-                  >
-                      <div
-                          v-for="notif in notifications"
-                          :key="notif.id"
-                          class="px-4 py-3 hover:bg-gray-50/50 transition-colors cursor-pointer"
-                          :class="
-                              !notif.is_read ? 'bg-teal-50/20' : ''
-                          "
-                          @click="markAsRead(notif.id)"
-                      >
-                          <div class="flex items-start gap-3">
-                              <div
-                                  class="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs"
-                                  :class="
-                                      eventColors[notif.event_type] ||
-                                      'bg-gray-100 text-gray-500'
-                                  "
-                              >
-                                  <component
-                                      :is="
-                                          notif.event_type ===
-                                          'new_application'
-                                              ? Briefcase
-                                              : notif.event_type ===
-                                                  'new_subscriber'
-                                                ? MailOpen
-                                                : notif.event_type ===
-                                                    'new_message'
-                                                  ? Mail
-                                                  : FileText
-                                      "
-                                      :size="14"
-                                  />
-                              </div>
-                              <div class="flex-1 min-w-0">
-                                  <div
-                                      class="text-sm font-medium text-gray-900 truncate"
-                                  >
-                                      {{ notif.title }}
-                                  </div>
-                                  <div
-                                      class="text-xs text-gray-500 line-clamp-2 mt-0.5"
-                                  >
-                                      {{ notif.body }}
-                                  </div>
-                                  <div
-                                      class="text-[10px] text-gray-400 mt-1"
-                                  >
-                                      {{
-                                          formatTime(notif.created_at)
-                                      }}
-                                  </div>
-                              </div>
-                              <button
-                                  @click.stop="
-                                      deleteNotification(notif.id)
-                                  "
-                                  class="p-1 text-gray-300 hover:text-red-500 transition-colors shrink-0"
-                              >
-                                  <Trash2 :size="12" />
-                              </button>
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowNotifications(false)}
+                  />
+
+                  <div className="absolute right-0 top-12 w-[calc(100vw-2rem)] sm:w-96 bg-popover text-popover-foreground rounded-xl border border-border shadow-xl z-50 overflow-hidden">
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-border/60">
+                      <h3 className="text-sm font-bold">Notifications</h3>
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={markAllRead}
+                          className="flex items-center gap-1 text-xs text-primary hover:underline transition-colors"
+                        >
+                          <CheckCheck size={12} /> Mark all read
+                        </button>
+                      )}
+                    </div>
+                    <div className="max-h-[60vh] sm:max-h-80 overflow-y-auto divide-y divide-border/40">
+                      {notifications.map((notif) => (
+                        <div
+                          key={notif.user_id}
+                          className={`px-4 py-3 hover:bg-muted/50 transition-colors cursor-pointer flex items-start gap-3 ${!notif.is_read ? "bg-muted/30" : ""}`}
+                          onClick={() => markAsRead(notif.user_id)}
+                        >
+                          <div
+                            className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs ${eventColors[notif.event_type] || "bg-muted text-muted-foreground"}`}
+                          >
+                            {getEventIcon(notif.event_type)}
                           </div>
-                      </div>
-                      <div
-                          v-if="!notifications.length"
-                          class="px-4 py-8 text-center text-gray-400 text-sm"
-                      >
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium truncate">
+                              {notif.title}
+                            </div>
+                            <div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
+                              {notif.body}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground/70 mt-1">
+                              {formatTime(notif.created_at)}
+                            </div>
+                          </div>
+                          <button
+                            onClick={(e) =>
+                              deleteNotification(notif.user_id, e)
+                            }
+                            className="p-1 text-muted-foreground/60 hover:text-destructive transition-colors shrink-0"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      ))}
+                      {notifications.length === 0 && (
+                        <div className="px-4 py-8 text-center text-muted-foreground text-sm">
                           No notifications yet.
-                      </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
-              </div>
-          </div>
-          <div v-if="isSupported && !isSubscribed">
-              <button
-                  @click="handleSubscribe"
-                  class="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors"
-              >
-                  <BellRing :size="16" />
-              </button>
-          </div>
-          <div
-              v-if="!isSupported && !isSubscribed"
-              class="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors"
-          >
-              <BellOff :size="16" />
-          </div>
+                </>
+              )}
+            </div>
+          ) : isSupported ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleSubscribe}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <BellRing className="h-5 w-5" />
+            </Button>
+          ) : (
+            <div className="p-2 text-muted-foreground/40">
+              <BellOff className="h-5 w-5" />
+            </div>
+          )}
         </div>
-      </div >
+      </div>
 
-      <!-- Click outside to close notifications -->
-      <div
-          v-if="showNotifications"
-          class="fixed inset-0 z-40"
-          @click="closeNotifications"
-      ></div>
-
-      <Modal
-          :show="permissionStatus === 'denied'"
-          size="md"
-          @close="permissionStatus = 'default'"
+      {/* Replaced raw custom Modal layouts with Radix/Shadcn UI standard Dialog context */}
+      <Dialog
+        open={permissionStatus === "denied"}
+        onOpenChange={(open) => !open && setPermissionStatus?.("default")}
       >
-          <ModalHeader class="text-gray-900 font-bold">
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-foreground font-bold">
               Notification Permission Denied
-          </ModalHeader>
-
-          <ModalBody>
-              <p class="text-sm text-gray-600 mb-4">
-                  You have blocked notifications for this site. To receive
-                  real-time updates, you must manually reset your browser
-                  preferences.
-              </p>
-
-              <div
-                  class="flex gap-3 p-3 bg-amber-50 rounded-lg border border-amber-100 text-amber-800"
-              >
-                  <Info class="w-5 h-5 shrink-0 mt-0.5" />
-                  <div class="text-xs leading-relaxed">
-                      <span class="font-semibold block mb-1"
-                          >How to fix this:</span
-                      >
-                      Click the site settings/lock icon next to the URL bar in
-                      your browser address row, change
-                      <span class="font-semibold">Notifications</span> to
-                      <span class="font-semibold">Allow</span>, and then click
-                      "Try again".
-                  </div>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              You have blocked notifications for this site. To receive real-time
+              updates, you must manually reset your browser preferences.
+            </p>
+            <div className="flex gap-3 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-100 dark:border-amber-900/30 text-amber-800 dark:text-amber-200">
+              <Info className="w-5 h-5 shrink-0 mt-0.5" />
+              <div className="text-xs leading-relaxed">
+                <span className="font-semibold block mb-1">
+                  How to fix this:
+                </span>
+                Click the site settings/lock icon next to the URL bar in your
+                browser address row, change{" "}
+                <span className="font-semibold">Notifications</span> to{" "}
+                <span className="font-semibold">Allow</span>, and then click
+                "Try again".
               </div>
-          </ModalBody>
-
-          <ModalFooter>
-              <div class="flex justify-end gap-3 w-full">
-                  <button
-                      @click="permissionStatus = 'default'"
-                      class="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
-                  >
-                      Close
-                  </button>
-              </div>
-          </ModalFooter>
-      </Modal>
+            </div>
+          </div>
+          <DialogFooter className="sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setPermissionStatus?.("default")}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </header>
   );
 }

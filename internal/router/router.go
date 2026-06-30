@@ -1,7 +1,6 @@
 package router
 
 import (
-	"embed"
 	"encoding/json"
 	"fmt"
 	"io/fs"
@@ -14,15 +13,13 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/imrany/elegance"
 	"github.com/imrany/elegance/internal/database"
 	"github.com/imrany/elegance/internal/handlers"
 	"github.com/imrany/elegance/internal/middleware"
 	"github.com/imrany/elegance/internal/models"
 	"github.com/spf13/viper"
 )
-
-//go:embed dist/*
-var dist embed.FS
 
 type ServerConfig struct {
 	Port int
@@ -86,7 +83,7 @@ func New(cfg *Config, db database.DB) *Server {
 	handler := handlers.New(db, cfg.JWTSecret)
 
 	// Load and parse index.html from embedded dist
-	indexContent, err := dist.ReadFile("dist/index.html")
+	indexContent, err := elegance.DistFS.ReadFile("dist/index.html")
 	if err != nil {
 		log.Fatalf("Critical: Could not read dist/index.html: %v", err)
 	}
@@ -419,7 +416,7 @@ func (s *Server) serveManifestJSON(c *gin.Context) {
 // setupSPARouting configures the SPA routing for the embedded frontend
 func (s *Server) setupSPARouting() {
 	// Get the embedded dist filesystem
-	distFS, err := fs.Sub(dist, "dist")
+	distFS, err := fs.Sub(elegance.DistFS, "dist")
 	if err != nil {
 		log.Fatal("Failed to load embedded dist folder: ", err)
 	}

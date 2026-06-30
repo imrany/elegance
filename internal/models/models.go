@@ -4,6 +4,16 @@ import (
 	"time"
 )
 
+type Notification struct {
+	UserID    string    `json:"user_id" db:"user_id"`
+	Title     string    `json:"title" db:"title"`
+	Body      string    `json:"body" db:"body"`
+	EventType string    `json:"event_type" db:"event_type"`
+	IsRead    bool      `json:"is_read" db:"is_read"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+}
+
 type PushSubscription struct {
 	UserID    string    `json:"user_id"`
 	Endpoint  string    `json:"endpoint"`

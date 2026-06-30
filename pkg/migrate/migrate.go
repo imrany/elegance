@@ -1,4 +1,4 @@
-package migrator
+package migrate
 
 import (
 	"database/sql"
@@ -10,9 +10,6 @@ import (
 	"time"
 )
 
-//go:embed migrations
-var migrationsFS embed.FS
-
 // Migration represents a database migration
 type Migration struct {
 	Version   int
@@ -22,35 +19,35 @@ type Migration struct {
 	AppliedAt *time.Time
 }
 
-// Migrator handles database migrations
-type Migrator struct {
-	db         *sql.DB
-	dbType     string
-	migrations []Migration
+// Migrate handles database migrations
+type Migrate struct {
+	db           *sql.DB
+	dbType       string
+	migrationsFS embed.FS // Pass it dynamically here
+	migrations   []Migration
 }
 
-// New creates a new migrator instance
-func New(db *sql.DB, dbType string) (*Migrator, error) {
-	m := &Migrator{
-		db:     db,
-		dbType: dbType,
+// Accept the FS as a parameter in New
+func New(db *sql.DB, dbType string, fs embed.FS) (*Migrate, error) {
+	m := &Migrate{
+		db:           db,
+		dbType:       dbType,
+		migrationsFS: fs,
 	}
 
-	// Create migrations table
 	if err := m.createMigrationsTable(); err != nil {
-		return nil, fmt.Errorf("failed to create migrations table: %w", err)
+		return nil, err
 	}
 
-	// Load migrations from embedded files
 	if err := m.loadMigrations(); err != nil {
-		return nil, fmt.Errorf("failed to load migrations: %w", err)
+		return nil, err
 	}
 
 	return m, nil
 }
 
 // createMigrationsTable creates the schema_migrations table
-func (m *Migrator) createMigrationsTable() error {
+func (m *Migrate) createMigrationsTable() error {
 	var query string
 
 	if m.dbType == "postgres" {
@@ -75,37 +72,32 @@ func (m *Migrator) createMigrationsTable() error {
 	return err
 }
 
-// loadMigrations loads migrations from embedded filesystem
-func (m *Migrator) loadMigrations() error {
-	entries, err := migrationsFS.ReadDir("migrations")
+// loadMigrations loads migrations from embedded filesystem targeting the specific dbType directory
+func (m *Migrate) loadMigrations() error {
+	// Because the root embedded it, the path remains "migrations/postgres" or "migrations/sqlite"
+	dirPath := fmt.Sprintf("migrations/%s", m.dbType)
+	entries, err := m.migrationsFS.ReadDir(dirPath)
 	if err != nil {
-		return fmt.Errorf("failed to read migrations directory: %w", err)
+		return fmt.Errorf("failed to read migrations directory %s: %w", dirPath, err)
 	}
 
 	migrations := make(map[int]Migration)
-
 	for _, entry := range entries {
 		if entry.IsDir() {
 			continue
 		}
 
 		filename := entry.Name()
-
-		// Parse migration files (format: 001_create_tables_postgres.up.sql)
-		version, name, direction, dbType, err := parseMigrationFilename(filename)
+		version, name, direction, err := parseMigrationFilename(filename)
 		if err != nil {
-			log.Printf("Skipping invalid migration file: %s", filename)
+			log.Printf("Skipping invalid migration file %s: %v", filename, err)
 			continue
 		}
 
-		// Only load migrations for current database type
-		if dbType != m.dbType {
-			continue
-		}
-
-		content, err := migrationsFS.ReadFile("migrations/" + filename)
+		filePath := fmt.Sprintf("%s/%s", dirPath, filename)
+		content, err := m.migrationsFS.ReadFile(filePath)
 		if err != nil {
-			return fmt.Errorf("failed to read migration file %s: %w", filename, err)
+			return fmt.Errorf("failed to read migration file %s: %w", filePath, err)
 		}
 
 		migration := migrations[version]
@@ -117,11 +109,9 @@ func (m *Migrator) loadMigrations() error {
 		} else {
 			migration.DownSQL = string(content)
 		}
-
 		migrations[version] = migration
 	}
 
-	// Convert map to sorted slice
 	for _, migration := range migrations {
 		m.migrations = append(m.migrations, migration)
 	}
@@ -134,51 +124,50 @@ func (m *Migrator) loadMigrations() error {
 }
 
 // parseMigrationFilename parses migration filename
-// Format: 001_create_tables_postgres.up.sql
-func parseMigrationFilename(filename string) (version int, name, direction, dbType string, err error) {
+// Format: 001_create_tables.up.sql
+func parseMigrationFilename(filename string) (version int, name, direction string, err error) {
 	// Remove .sql extension
+	if !strings.HasSuffix(filename, ".sql") {
+		return 0, "", "", fmt.Errorf("not a SQL file")
+	}
 	filename = strings.TrimSuffix(filename, ".sql")
 
-	// Split by dots to get direction
+	// Split by dots to get direction (.up or .down)
 	parts := strings.Split(filename, ".")
 	if len(parts) != 2 {
-		return 0, "", "", "", fmt.Errorf("invalid migration filename format")
+		return 0, "", "", fmt.Errorf("invalid migration filename format (expected version_name.direction.sql)")
 	}
 
 	direction = parts[1] // up or down
+	if direction != "up" && direction != "down" {
+		return 0, "", "", fmt.Errorf("invalid direction: %s", direction)
+	}
 
 	// Split the first part by underscores
 	nameParts := strings.Split(parts[0], "_")
-	if len(nameParts) < 3 {
-		return 0, "", "", "", fmt.Errorf("invalid migration filename format")
+	if len(nameParts) < 2 {
+		return 0, "", "", fmt.Errorf("invalid migration prefix format (expected version_name)")
 	}
 
 	// Parse version
 	_, err = fmt.Sscanf(nameParts[0], "%d", &version)
 	if err != nil {
-		return 0, "", "", "", fmt.Errorf("invalid version number: %w", err)
+		return 0, "", "", fmt.Errorf("invalid version number: %w", err)
 	}
 
-	// Last part is database type
-	dbType = nameParts[len(nameParts)-1]
-	if dbType != "postgres" && dbType != "sqlite" {
-		return 0, "", "", "", fmt.Errorf("invalid database type: %s", dbType)
-	}
+	// Middle parts form the name (no longer ending with _postgres or _sqlite)
+	name = strings.Join(nameParts[1:], "_")
 
-	// Middle parts form the name
-	name = strings.Join(nameParts[1:len(nameParts)-1], "_")
-
-	return version, name, direction, dbType, nil
+	return version, name, direction, nil
 }
 
 // Up runs all pending migrations or a specific one
-func (m *Migrator) Up(target *int) error {
+func (m *Migrate) Up(target *int) error {
 	appliedVersions, err := m.getAppliedVersions()
 	if err != nil {
 		return fmt.Errorf("failed to get applied versions: %w", err)
 	}
 
-	// --- Handle specific target reapplication if already applied ---
 	if target != nil {
 		var targetMigration *Migration
 		for i := range m.migrations {
@@ -193,39 +182,31 @@ func (m *Migrator) Up(target *int) error {
 		}
 
 		if _, isApplied := appliedVersions[*target]; isApplied {
-			// Target migration is already applied. Reapply it by rolling back and then applying again.
 			if targetMigration.DownSQL == "" {
 				return fmt.Errorf("no DOWN migration found for version %d, cannot reapply", *target)
 			}
 
 			log.Printf("Reapplying migration %03d: %s (rolling back first)", targetMigration.Version, targetMigration.Name)
 
-			// Perform rollback
 			if err := m.rollbackMigration(*targetMigration); err != nil {
 				return fmt.Errorf("failed to rollback migration %d for reapplication: %w", targetMigration.Version, err)
 			}
 
-			// Then apply
 			if err := m.applyMigration(*targetMigration); err != nil {
 				return fmt.Errorf("failed to apply migration %d after rollback: %w", targetMigration.Version, err)
 			}
 
 			log.Printf("Successfully reapplied migration %d", *target)
-			return nil // Reapplication complete for the specific target
+			return nil
 		}
-		// If target migration is not applied, it will be handled by the general apply logic below.
 	}
-	// --- End of target reapplication handling ---
 
 	var migrationsToApply []Migration
 	for _, migration := range m.migrations {
-		// If a target is specified, stop if we've passed it
 		if target != nil && migration.Version > *target {
 			break
 		}
 
-		// Skip if already applied. This correctly handles general application scenarios.
-		// The specific reapplication case for an *already applied* target is handled above and returns early.
 		if _, applied := appliedVersions[migration.Version]; applied {
 			continue
 		}
@@ -235,8 +216,6 @@ func (m *Migrator) Up(target *int) error {
 
 	if len(migrationsToApply) == 0 {
 		if target != nil {
-			// This case is reached if the target was already applied and reapplication wasn't explicitly requested (or failed)
-			// or if no pending migrations exist before the target.
 			log.Printf("Migration %d was already applied, or no pending migrations before it.", *target)
 		} else {
 			log.Println("No pending migrations to apply")
@@ -259,16 +238,12 @@ func (m *Migrator) Up(target *int) error {
 
 		count++
 
-		// If a target is specified, and we just applied it, stop
 		if target != nil && migration.Version == *target {
 			break
 		}
 	}
 
-	if count == 0 {
-		// This branch would be hit if migrationsToApply was not empty, but all had empty UpSQL
-		log.Println("No migrations with UP SQL found among pending ones.")
-	} else {
+	if count > 0 {
 		log.Printf("Successfully applied %d migration(s)", count)
 	}
 
@@ -276,7 +251,7 @@ func (m *Migrator) Up(target *int) error {
 }
 
 // Down rolls back the last migration
-func (m *Migrator) Down() error {
+func (m *Migrate) Down() error {
 	appliedVersions, err := m.getAppliedVersions()
 	if err != nil {
 		return fmt.Errorf("failed to get applied versions: %w", err)
@@ -287,7 +262,6 @@ func (m *Migrator) Down() error {
 		return nil
 	}
 
-	// Find highest applied version
 	var lastVersion int
 	for version := range appliedVersions {
 		if version > lastVersion {
@@ -295,7 +269,6 @@ func (m *Migrator) Down() error {
 		}
 	}
 
-	// Find the migration
 	var migration *Migration
 	for i := range m.migrations {
 		if m.migrations[i].Version == lastVersion {
@@ -323,7 +296,7 @@ func (m *Migrator) Down() error {
 }
 
 // Status shows migration status
-func (m *Migrator) Status() error {
+func (m *Migrate) Status() error {
 	appliedVersions, err := m.getAppliedVersions()
 	if err != nil {
 		return fmt.Errorf("failed to get applied versions: %w", err)
@@ -364,7 +337,7 @@ func (m *Migrator) Status() error {
 }
 
 // getAppliedVersions returns map of applied migration versions
-func (m *Migrator) getAppliedVersions() (map[int]*time.Time, error) {
+func (m *Migrate) getAppliedVersions() (map[int]*time.Time, error) {
 	rows, err := m.db.Query("SELECT version, applied_at FROM schema_migrations ORDER BY version")
 	if err != nil {
 		return nil, err
@@ -385,19 +358,17 @@ func (m *Migrator) getAppliedVersions() (map[int]*time.Time, error) {
 }
 
 // applyMigration applies a single migration
-func (m *Migrator) applyMigration(migration Migration) error {
+func (m *Migrate) applyMigration(migration Migration) error {
 	tx, err := m.db.Begin()
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.Rollback()
 
-	// Execute migration SQL
 	if _, err := tx.Exec(migration.UpSQL); err != nil {
 		return fmt.Errorf("failed to execute migration: %w", err)
 	}
 
-	// Record migration
 	var query string
 	if m.dbType == "postgres" {
 		query = "INSERT INTO schema_migrations (version, name, applied_at) VALUES ($1, $2, NOW())"
@@ -417,19 +388,17 @@ func (m *Migrator) applyMigration(migration Migration) error {
 }
 
 // rollbackMigration rolls back a single migration
-func (m *Migrator) rollbackMigration(migration Migration) error {
+func (m *Migrate) rollbackMigration(migration Migration) error {
 	tx, err := m.db.Begin()
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.Rollback()
 
-	// Execute rollback SQL
 	if _, err := tx.Exec(migration.DownSQL); err != nil {
 		return fmt.Errorf("failed to execute rollback: %w", err)
 	}
 
-	// Remove migration record
 	var query string
 	if m.dbType == "postgres" {
 		query = "DELETE FROM schema_migrations WHERE version = $1"
@@ -449,7 +418,7 @@ func (m *Migrator) rollbackMigration(migration Migration) error {
 }
 
 // Reset rolls back all migrations
-func (m *Migrator) Reset() error {
+func (m *Migrate) Reset() error {
 	appliedVersions, err := m.getAppliedVersions()
 	if err != nil {
 		return fmt.Errorf("failed to get applied versions: %w", err)
@@ -460,7 +429,6 @@ func (m *Migrator) Reset() error {
 		return nil
 	}
 
-	// Rollback in reverse order
 	for i := len(m.migrations) - 1; i >= 0; i-- {
 		migration := m.migrations[i]
 

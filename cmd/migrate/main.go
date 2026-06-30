@@ -6,7 +6,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/imrany/elegance/internal/migrator"
+	"github.com/imrany/elegance"
+	"github.com/imrany/elegance/pkg/migrate"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/spf13/pflag"
@@ -71,7 +72,7 @@ func main() {
 	log.Printf("Connected to %s database", dbType)
 
 	// Create migrator
-	m, err := migrator.New(db, dbType)
+	m, err := migrate.New(db, dbType, elegance.MigrationsFS)
 	if err != nil {
 		log.Fatalf("Failed to create migrator: %v", err)
 	}

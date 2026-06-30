@@ -8,12 +8,12 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/imrany/elegance"
 	"github.com/imrany/elegance/internal/database"
-	"github.com/imrany/elegance/internal/migrator"
 	"github.com/imrany/elegance/internal/router"
+	"github.com/imrany/elegance/pkg/migrate"
 	"github.com/imrany/elegance/pkg/utils"
 	"github.com/joho/godotenv"
-	_ "github.com/lib/pq"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -62,7 +62,7 @@ func runServer() {
 
 	// Run migrations automatically
 	log.Println("Running database migrations...")
-	m, err := migrator.New(sqlDB, cfg.DBType)
+	m, err := migrate.New(sqlDB, cfg.DBType, elegance.MigrationsFS)
 	if err != nil {
 		sqlDB.Close()
 		log.Fatalf("%v", err)
@@ -184,7 +184,7 @@ func main() {
 			}
 			defer sqlDB.Close()
 
-			m, err := migrator.New(sqlDB, dbType)
+			m, err := migrate.New(sqlDB, dbType, elegance.MigrationsFS)
 			if err != nil {
 				log.Fatalf("Failed to create migrator: %v", err)
 			}
@@ -213,7 +213,7 @@ func main() {
 			}
 			defer sqlDB.Close()
 
-			m, err := migrator.New(sqlDB, dbType)
+			m, err := migrate.New(sqlDB, dbType, elegance.MigrationsFS)
 			if err != nil {
 				log.Fatalf("Failed to create migrator: %v", err)
 			}
@@ -252,7 +252,7 @@ func main() {
 			}
 			defer sqlDB.Close()
 
-			m, err := migrator.New(sqlDB, dbType)
+			m, err := migrate.New(sqlDB, dbType, elegance.MigrationsFS)
 			if err != nil {
 				log.Fatalf("Failed to create migrator: %v", err)
 			}

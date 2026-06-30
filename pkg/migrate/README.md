@@ -20,43 +20,36 @@ A robust, database-agnostic migration system for PostgreSQL and SQLite.
 
 ```
 ecommerce-backend/
-├── cmd
-│   └──/main.go migrate/
-│       └── main.go                 # Migration CLI tool
-├── internal/
-│   └── migrator/
-│       ├── migrator.go            # Migrator implementation
-│       └── migrations/            # Embedded migration files
-│           ├── 001_create_tables_postgres.up.sql
-│           ├── 001_create_tables_postgres.down.sql
-│           ├── 001_create_tables_sqlite.up.sql
-│           ├── 001_create_tables_sqlite.down.sql
-│           ├── 002_seed_data_postgres.up.sql
-│           ├── 002_seed_data_postgres.down.sql
-│           ├── 002_seed_data_sqlite.up.sql
-│           └── 002_seed_data_sqlite.down.sql
+│       └── migrations/sqlite # (use sqlite or postgres) as dir name
+│           ├── 001_create_tables.up.sql
+│           ├── 001_create_tables.down.sql
+│           ├── 001_create_tables.up.sql
+│           ├── 001_create_tables.down.sql
+│           ├── 002_seed_data.up.sql
+│           ├── 002_seed_data.down.sql
+│           ├── 002_seed_data.up.sql
+│           └── 002_seed_data.down.sql
 ```
 
 ---
 
 ## 📝 Migration File Naming Convention
 
-Format: `{version}_{name}_{database}.{direction}.sql`
+Format: `{version}_{name}.{direction}.sql`
 
 **Examples:**
 ```
-001_create_tables_postgres.up.sql
-001_create_tables_postgres.down.sql
-001_create_tables_sqlite.up.sql
-001_create_tables_sqlite.down.sql
-002_seed_data_postgres.up.sql
-002_seed_data_sqlite.up.sql
+001_create_tables.up.sql
+001_create_tables.down.sql
+001_create_tables.up.sql
+001_create_tables.down.sql
+002_seed_data.up.sql
+002_seed_data.up.sql
 ```
 
 **Parts:**
 - `001` - Version number (3 digits, zero-padded)
 - `create_tables` - Migration name (snake_case)
-- `postgres` or `sqlite` - Database type
 - `up` or `down` - Migration direction
 - `.sql` - File extension
 
@@ -147,7 +140,7 @@ go run cmd/migrate/main.go --cmd=reset
 
 ## 📄 Additional Migration Files
 
-### **002_seed_data_postgres.up.sql**
+### **002_seed_data.up.sql**
 
 ```sql
 -- Insert default settings
@@ -217,7 +210,7 @@ FROM categories c WHERE c.slug = 'accessories'
 ON CONFLICT (slug) DO NOTHING;
 ```
 
-### **002_seed_data_postgres.down.sql**
+### **002_seed_data.down.sql**
 
 ```sql
 -- Remove sample products
@@ -243,7 +236,7 @@ DELETE FROM site_settings WHERE key IN (
 );
 ```
 
-### **002_seed_data_sqlite.up.sql**
+### **002_seed_data.up.sql**
 
 ```sql
 -- Insert default settings
@@ -308,7 +301,7 @@ SELECT
 FROM categories c WHERE c.slug = 'accessories';
 ```
 
-### **002_seed_data_sqlite.down.sql**
+### **002_seed_data.down.sql**
 
 ```sql
 -- Remove sample products
@@ -539,10 +532,10 @@ Always backup your database before running `reset`.
 
 ```bash
 # 1. Create new migration files
-touch internal/migrator/migrations/003_add_reviews_postgres.up.sql
-touch internal/migrator/migrations/003_add_reviews_postgres.down.sql
-touch internal/migrator/migrations/003_add_reviews_sqlite.up.sql
-touch internal/migrator/migrations/003_add_reviews_sqlite.down.sql
+touch internal/migrator/migrations/003_add_reviews.up.sql
+touch internal/migrator/migrations/003_add_reviews.down.sql
+touch internal/migrator/migrations/003_add_reviews.up.sql
+touch internal/migrator/migrations/003_add_reviews.down.sql
 
 # 2. Write SQL in migration files
 # ...

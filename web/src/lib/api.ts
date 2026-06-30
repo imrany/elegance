@@ -18,6 +18,18 @@ export interface ApiError {
   error?: string; // Compatibility with your toast.error(error.error) logic
 }
 
+export type EventType =
+  "new_application" | "new_subscriber" | "new_message" | string;
+export interface Notification {
+  user_id: string;
+  title: string;
+  body: string;
+  created_at: string;
+  updated_at: string;
+  event_type: EventType;
+  is_read: boolean;
+}
+
 export interface HeroType {
   background_image: string;
   cta_link: string;
@@ -681,6 +693,22 @@ class ApiClient {
     return this.request<void>(`/api/admin/smtp/compose`, {
       method: "POST",
       body: JSON.stringify(data),
+    });
+  }
+
+  // notifications
+  async listNotifications() {
+    return this.request<Notification[]>(`/api/notifications/list`);
+  }
+  async unreadNotifications(userid: string) {
+    return this.request<number>(`/api/notifications/${userid}`);
+  }
+  async markAsReadNotifications(id?: string) {
+    return this.request<void>(`/api/notifications/mark-as-read/${id}`);
+  }
+  async deleteNotification(id: string) {
+    return this.request<void>(`/api/notifications/${id}`, {
+      method: "POST",
     });
   }
 

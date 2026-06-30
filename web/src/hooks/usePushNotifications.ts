@@ -111,6 +111,9 @@ export function usePushNotifications() {
     }
   }
 
+  function setPermissionStatusFunc(value: NotificationPermission) {
+    setPermissionStatus(value);
+  }
   return {
     isSupported,
     isSubscribed,
@@ -118,5 +121,6 @@ export function usePushNotifications() {
     unsubscribe,
     checkSubscriptionStatus,
     permissionStatus,
+    setPermissionStatus: setPermissionStatusFunc,
   };
 }
