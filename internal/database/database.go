@@ -57,6 +57,16 @@ type DB interface {
 	CreateEmailSubscription(subscription *models.EmailSubscription) error
 	DeleteEmailSubscription(id string) error
 
+	//webpush GetEmailSubscriptions
+	CreateWebPushSubscription(userID string, subscription *models.WebPushSubscription, userAgent string) error
+	DeleteSubscription(endpoint string) error
+	SubscriptionExists(endpoint string) (bool, error)
+	GetSubscriptionByEndpoint(endpoint string) (*models.PushSubscription, error)
+	GetSubscriptionsByUserID(userID string) ([]models.PushSubscription, error)
+	GetSubscriptionsByUserIDs(userIDs []string) ([]models.PushSubscription, error)
+	GetAllSubscriptions() ([]models.PushSubscription, error)
+	DeleteSubscriptionsByUserID(userID string) error
+
 	// setup  (initial)
 	GetSetupStatus() (*models.SetupStatus, error)
 	SetupAdmin(user *models.User) (*models.User, error)

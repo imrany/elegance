@@ -684,6 +684,27 @@ class ApiClient {
     });
   }
 
+  // push notifications
+  async unsubscribeWebPush(data: { endpoint: string }) {
+    return this.request<void>(`/api/webpush/unsubscribe`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async subscribeWebPush(data: {
+    user_id: string;
+    endpoint: string;
+    p256dh: string;
+    auth_key: string;
+    user_agent: string;
+  }) {
+    return this.request<void>(`/api/webpush/subscribe`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
   // Website Builder
   async getAllWebsiteConfig() {
     const url = `/api/website-builder`;

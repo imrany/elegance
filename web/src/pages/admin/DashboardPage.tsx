@@ -7,14 +7,22 @@ import {
   PlusCircle,
   Settings,
   ArrowRight,
+  MailWarning,
+  MessageCircleWarning,
+  ToolCase,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { api } from "@/lib/api";
 import { formatPrice } from "@/lib/utils";
 import { useProducts } from "@/hooks/useProducts";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useGeneralContext } from "@/contexts/GeneralContext";
 
 export default function DashboardPage() {
+  const { websiteConfig } = useGeneralContext();
+  const smtp = websiteConfig?.smtp;
+  const whatsapp = websiteConfig?.whatsapp;
+
   // Fetch product count
   const { data: products, isLoading: isLoadingProducts } = useProducts();
 
@@ -112,7 +120,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Quick Actions Panel Workspace */}
-      <div className="md:col-span-2 border border-border bg-background p-6  flex flex-col justify-between">
+      <div className="md:col-span-2 border border-border bg-background p-6  flex gap-4 flex-col justify-between">
         <div className="space-y-1">
           <h2 className="font-serif text-lg font-medium text-foreground">
             Quick Actions
@@ -124,7 +132,7 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+        <div className="mt-2 grid gap-3 sm:grid-cols-2">
           <Link
             to="/admin/products"
             className="flex items-center justify-between p-3 border border-border hover:border-foreground/40 hover:bg-muted/50 rounded-sm group transition-all text-sm font-medium"
@@ -137,12 +145,51 @@ export default function DashboardPage() {
           </Link>
 
           <Link
-            to="/admin/settings"
+            to="/admin/settings?tab=store"
             className="flex items-center justify-between p-3 border border-border hover:border-foreground/40 hover:bg-muted/50 rounded-sm group transition-all text-sm font-medium"
           >
             <span className="flex items-center gap-2.5">
               <Settings className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
               Store Settings
+            </span>
+            <ArrowRight className="h-4 w-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-muted-foreground" />
+          </Link>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {smtp && !smtp.is_configured && (
+            <Link
+              to="/admin/settings?tab=smtp"
+              className="flex items-center justify-between p-3 border border-border hover:border-foreground/40 hover:bg-muted/50 rounded-sm group transition-all text-sm font-medium"
+            >
+              <span className="flex items-center gap-2.5">
+                <MailWarning className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+                Setup SMTP (Email)
+              </span>
+              <ArrowRight className="h-4 w-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-muted-foreground" />
+            </Link>
+          )}
+
+          {whatsapp && !whatsapp.phone && (
+            <Link
+              to="/admin/settings?tab=whatsapp"
+              className="flex items-center justify-between p-3 border border-border hover:border-foreground/40 hover:bg-muted/50 rounded-sm group transition-all text-sm font-medium"
+            >
+              <span className="flex items-center gap-2.5">
+                <MessageCircleWarning className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+                Setup Whatsapp
+              </span>
+              <ArrowRight className="h-4 w-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-muted-foreground" />
+            </Link>
+          )}
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Link
+            to="/admin/website-builder"
+            className="flex items-center justify-between p-3 border border-border hover:border-foreground/40 hover:bg-muted/50 rounded-sm group transition-all text-sm font-medium"
+          >
+            <span className="flex items-center gap-2.5">
+              <ToolCase className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+              Build your website
             </span>
             <ArrowRight className="h-4 w-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-muted-foreground" />
           </Link>

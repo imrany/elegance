@@ -4,6 +4,27 @@ import (
 	"time"
 )
 
+type PushSubscription struct {
+	UserID    string    `json:"user_id"`
+	Endpoint  string    `json:"endpoint"`
+	P256dhKey string    `json:"p256dh_key"`
+	AuthKey   string    `json:"auth_key"`
+	UserAgent string    `json:"user_agent,omitempty"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// SubscriptionRequest from frontend
+type Keys struct {
+	P256dh string `json:"p256dh" db:"p256dh"`
+	Auth   string `json:"auth" db:"auth"`
+}
+
+type WebPushSubscription struct {
+	Endpoint string `json:"endpoint" db:"endpoint"`
+	Keys     Keys   `json:"keys" db:"keys"`
+}
+
 // User represents a user
 type User struct {
 	ID          string    `json:"id" db:"id"`

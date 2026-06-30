@@ -11,6 +11,7 @@ import (
 	"github.com/imrany/elegance/internal/database"
 	"github.com/imrany/elegance/internal/migrator"
 	"github.com/imrany/elegance/internal/router"
+	"github.com/imrany/elegance/pkg/utils"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/spf13/cobra"
@@ -133,6 +134,10 @@ func main() {
 		"HOST":         "host",
 		"JWT_SECRET":   "jwt-secret",
 		"UPLOAD_DIR":   "upload-dir",
+
+		"VAPID_PUBLIC_KEY":  "vapid-public-key",
+		"VAPID_PRIVATE_KEY": "vapid-private-key",
+		"VAPID_EMAIL":       "vapid-email",
 	}
 
 	// Define flags
@@ -142,6 +147,9 @@ func main() {
 	rootCmd.PersistentFlags().String("db-type", "sqlite", "Database type (sqlite or postgres)")
 	rootCmd.PersistentFlags().String("db-dsn", "./elegance.db", "Database DSN/connection string")
 	rootCmd.PersistentFlags().String("upload-dir", "./uploads", "Upload directory")
+	rootCmd.PersistentFlags().String("vapid-email", "", "mailto:example@gmail.com")
+	rootCmd.PersistentFlags().String("vapid-public-key", "", "Set VAPID_PUBLIC_KEY")
+	rootCmd.PersistentFlags().String("vapid-private-key", "", "Set VAPID_PRIVATE_KEY")
 
 	// Bind flags to viper and environment variables
 	for envKey, flagKey := range envBindings {
@@ -257,10 +265,19 @@ func main() {
 		},
 	}
 
+	vapidKeyGenCmd := &cobra.Command{
+		Use:   "generate-vapid",
+		Short: "Generate Private and Public Vapid Key for Web push notificatons",
+		Run: func(cmd *cobra.Command, args []string) {
+			utils.GenerateVAPIDKeys()
+		},
+	}
+
 	// Add subcommands
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(rollbackCmd)
 	rootCmd.AddCommand(resetCmd)
+	rootCmd.AddCommand(vapidKeyGenCmd)
 
 	// Execute command
 	if err := rootCmd.Execute(); err != nil {

@@ -36,6 +36,7 @@ export function Footer() {
 
   const socialMedia = websiteConfig?.social;
   const store = websiteConfig?.store || { name: "Store", description: "" };
+  const smtp = websiteConfig?.smtp;
 
   async function handleSubscribe(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -222,53 +223,57 @@ export function Footer() {
           </div>
 
           {/* Newsletter */}
-          <div className="space-y-6">
-            <h3 className="text-sm font-medium tracking-luxury uppercase">
-              Newsletter
-            </h3>
-            <p className="text-sm text-primary-foreground/70">
-              Subscribe for exclusive offers, product updates and time-sensitive
-              discounts!
-            </p>
+          {smtp && smtp.is_configured && (
+            <div className="space-y-6">
+              <h3 className="text-sm font-medium tracking-luxury uppercase">
+                Newsletter
+              </h3>
+              <p className="text-sm text-primary-foreground/70">
+                Subscribe for exclusive offers, product updates and
+                time-sensitive discounts!
+              </p>
 
-            {!error && !message ? (
-              <form onSubmit={handleSubscribe} className="flex gap-2">
-                <Input
-                  type="email"
-                  name="email"
-                  required
-                  placeholder="Enter your email"
-                  className="bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/50 focus-visible:ring-primary-foreground/30"
-                  disabled={isSubmitting}
-                />
-                <Button
-                  type="submit"
-                  variant="outline"
-                  disabled={isSubmitting}
-                  className="border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground hover:text-primary transition-colors duration-200"
-                >
-                  {isSubmitting ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    "Join"
-                  )}
-                </Button>
-              </form>
-            ) : error ? (
-              <div className="space-y-2">
-                <p className="text-sm text-red-400 font-medium">{error}</p>
-                <Button
-                  variant="link"
-                  className="p-0 h-auto text-xs text-primary-foreground/50 hover:text-primary-foreground underline"
-                  onClick={() => setError("")}
-                >
-                  Try again
-                </Button>
-              </div>
-            ) : (
-              <p className="text-sm text-emerald-400 font-medium">{message}</p>
-            )}
-          </div>
+              {!error && !message ? (
+                <form onSubmit={handleSubscribe} className="flex gap-2">
+                  <Input
+                    type="email"
+                    name="email"
+                    required
+                    placeholder="Enter your email"
+                    className="bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/50 focus-visible:ring-primary-foreground/30"
+                    disabled={isSubmitting}
+                  />
+                  <Button
+                    type="submit"
+                    variant="outline"
+                    disabled={isSubmitting}
+                    className="border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground hover:text-primary transition-colors duration-200"
+                  >
+                    {isSubmitting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      "Join"
+                    )}
+                  </Button>
+                </form>
+              ) : error ? (
+                <div className="space-y-2">
+                  <p className="text-sm text-red-400 font-medium">{error}</p>
+                  <Button
+                    variant="link"
+                    className="p-0 h-auto text-xs text-primary-foreground/50 hover:text-primary-foreground underline"
+                    onClick={() => setError("")}
+                  >
+                    Try again
+                  </Button>
+                </div>
+              ) : (
+                <p className="text-sm text-emerald-400 font-medium">
+                  {message}
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Bottom Bar */}

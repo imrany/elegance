@@ -117,6 +117,7 @@ func (s *Server) setupRoutes() {
 	// SEO routes
 	s.router.GET("/sitemap.xml", s.serveSitemap)
 	s.router.GET("/robots.txt", s.serveRobotsTxt)
+	s.router.GET("/manifest.json", s.serveManifestJSON)
 
 	// API v1 routes
 	api := s.router.Group("/api")
@@ -382,6 +383,37 @@ Sitemap: ` + baseURL + `/sitemap.xml`
 
 	c.Header("Content-Type", "text/plain; charset=utf-8")
 	c.String(http.StatusOK, robots)
+}
+
+// serveManifest serves manifest.json
+func (s *Server) serveManifestJSON(c *gin.Context) {
+	settings, err := s.db.GetWebsiteSettingByKey("store")
+	if err != nil {
+		log.Printf(err.Error())
+		return
+	}
+
+	//parse settings.Value string into SmtpConfig
+	store := models.StoreConfig{}
+	if err := json.Unmarshal([]byte(settings.Value), &store); err != nil {
+		log.Printf("Failed to parse store value %s", err.Error())
+		return
+	}
+
+	manifest := `
+{
+  "short_name": ` + store.Name + `,
+  "name": ` + store.Name + `,
+  "description": ` + store.Description + `,
+  "start_url": "/",
+  "id": "/",
+  "background_color": "#FFFF",
+  "theme_color": "#FFFF",
+  "orientation": "portrait-primary",
+  "display": "standalone"
+}`
+	c.Header("Content-Type", "application/json")
+	c.String(http.StatusOK, manifest)
 }
 
 // setupSPARouting configures the SPA routing for the embedded frontend
