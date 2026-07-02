@@ -15,7 +15,7 @@ export interface ApiError {
   success: false;
   message: string;
   status: number;
-  error?: string; // Compatibility with your toast.error(error.error) logic
+  error?: string;
 }
 
 export interface HeroType {
@@ -131,27 +131,10 @@ export interface WhatsappType {
 export type MpesaSettlementType = "till" | "paybill";
 
 export interface MpesaType {
-  /** The settlement method chosen by the merchant */
   type: MpesaSettlementType;
-  /** The 10-digit Kenyan phone number registered for M-Pesa notifications */
   phone: string;
-
-  /**
-   * 6-7 digit number for "Buy Goods and Services".
-   * Required only if type is "till".
-   */
   till_number?: string;
-
-  /**
-   * The Business Shortcode for the Paybill.
-   * Required only if type is "paybill".
-   */
   paybill_number?: string;
-
-  /**
-   * The specific account identifier (e.g., "ONLINE-STORE").
-   * Required only if type is "paybill".
-   */
   account_number?: string;
 }
 
@@ -176,7 +159,7 @@ export interface WebsiteConfig {
   id: string;
   key: WebsiteSettingKey;
   value: SiteSettingValue;
-  createdAt: string; // Assuming ISO 8601 string for time.Time
+  createdAt: string;
   updatedAt: string;
 }
 
@@ -187,8 +170,8 @@ export interface User {
   last_name: string;
   phone_number: string;
   role: string;
-  created_at: string; // Assuming ISO 8601 string for time.Time
-  updated_at: string; // Assuming ISO 8601 string for time.Time
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Category {
@@ -197,8 +180,8 @@ export interface Category {
   slug: string;
   description: string | null;
   image_url: string | null;
-  created_at: string | null; // Assuming ISO 8601 string for time.Time
-  updated_at: string | null; // Assuming ISO 8601 string for time.Time
+  created_at: string | null;
+  updated_at: string | null;
 }
 
 export interface Product {
@@ -216,8 +199,8 @@ export interface Product {
   stock: number;
   featured: boolean;
   is_new: boolean;
-  created_at: string | null; // Assuming ISO 8601 string for time.Time
-  updated_at: string | null; // Assuming ISO 8601 string for time.Time
+  created_at: string | null;
+  updated_at: string | null;
 }
 
 export interface Order {
@@ -276,8 +259,8 @@ export interface SiteSetting {
   id: string;
   key: SiteSettingKey;
   value: SiteSettingValue;
-  createdAt: string; // Assuming ISO 8601 string for time.Time
-  updatedAt: string; // Assuming ISO 8601 string for time.Time
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface EmailSubscription {
@@ -287,10 +270,10 @@ export interface EmailSubscription {
 }
 
 export interface ProductFilters {
-  category_id?: string; // *string maps to optional string
-  featured?: boolean; // *bool maps to optional boolean
-  is_new?: boolean; // *bool maps to optional boolean
-  search?: string; // *string maps to optional string
+  category_id?: string;
+  featured?: boolean;
+  is_new?: boolean;
+  search?: string;
   limit: number;
   offset: number;
   order?: string;
@@ -316,35 +299,28 @@ class ApiClient {
     options: RequestInit = {},
   ): Promise<T> {
     const token = this.getAuthToken();
-    // Start with authorization header if available
     const headers: HeadersInit = {};
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }
 
-    // when options.body is an instance of FormData.
     if (!(options.body instanceof FormData)) {
       headers["Content-Type"] = "application/json";
     }
 
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-
     const finalHeaders = {
-      ...headers, // Our computed Auth/Content-Type headers
-      ...options.headers, // Any extra headers passed in by the caller
+      ...headers,
+      ...options.headers,
     };
 
     try {
       const response = await fetch(`${this.baseURL}${endpoint}`, {
         ...options,
-        headers: finalHeaders, // Use the final combined headers
+        headers: finalHeaders,
       });
 
       const result: ApiResponse<T> = await response.json();
 
-      // If the server returned an error status or success: false
       if (!response.ok || !result.success) {
         throw {
           success: false,
@@ -365,7 +341,6 @@ class ApiClient {
     }
   }
 
-  // Auth endpoints
   async signUp(
     email: string,
     password: string,
@@ -426,12 +401,10 @@ class ApiClient {
     });
   }
 
-  //pages
   async getPages() {
     return this.request<Page[]>(`/api/pages`);
   }
 
-  // Get a single page by ID
   async getPage(pageId: string) {
     return this.request<Page>(`/api/pages/${pageId}`);
   }
@@ -468,14 +441,12 @@ class ApiClient {
     });
   }
 
-  // Duplicate a page
   async duplicatePage(pageId: string) {
     return this.request<Page>(`/api/admin/pages/${pageId}/duplicate`, {
       method: "POST",
     });
   }
 
-  // Reorder page sections
   async reorderPageSections(pageId: string, sectionIds: string[]) {
     return this.request<void>(`/api/admin/pages/${pageId}/reorder-sections`, {
       method: "POST",
@@ -483,7 +454,6 @@ class ApiClient {
     });
   }
 
-  // Products
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async getProducts(params?: Record<string, any>) {
     const queryString = params
@@ -504,7 +474,6 @@ class ApiClient {
     return this.request<Product[]>("/api/products?is_new=true");
   }
 
-  // Categories
   async getCategories() {
     return this.request<Category[]>("/api/categories");
   }
@@ -536,7 +505,6 @@ class ApiClient {
     });
   }
 
-  // Orders
   async createOrder(orderData: Order) {
     return this.request<Order>("/api/orders", {
       method: "POST",
@@ -544,7 +512,6 @@ class ApiClient {
     });
   }
 
-  // /api/orders?key=user_id&&value=123
   async getOrders(key?: string, value?: string) {
     return this.request<Order[]>(
       `/api/orders?key=${key || ""}&value=${value || ""}`,
@@ -578,7 +545,6 @@ class ApiClient {
     });
   }
 
-  // Products (admin)
   async createProduct(productData: Product) {
     return this.request<Product>(`/api/admin/products`, {
       method: "POST",
@@ -599,7 +565,6 @@ class ApiClient {
     });
   }
 
-  // Admin: Get all orders
   async getAllOrders() {
     return this.request<Order[]>("/api/admin/orders");
   }
@@ -631,7 +596,6 @@ class ApiClient {
     return this.request<Order[]>(`/api/admin/users/${userId}/orders`);
   }
 
-  // Admin: Upload logo
   async uploadImage(formData: FormData) {
     return this.request<{
       url: string;
@@ -647,7 +611,6 @@ class ApiClient {
     });
   }
 
-  // Admin: User management
   async getAllUsers() {
     return this.request<User[]>("/api/admin/users");
   }
@@ -665,7 +628,6 @@ class ApiClient {
     });
   }
 
-  // smtp management
   async testSmtpConnection() {
     return this.request<void>(`/api/admin/smtp/test`, {
       method: "GET",
@@ -697,9 +659,11 @@ class ApiClient {
     });
   }
 
-  // push notifications
+  // FIXED: Added encodeURIComponent to escape specialized characters and forward slashes[cite: 4]
   async unsubscribeWebPush(data: { endpoint: string }) {
-    return this.request<void>(`/api/webpush/unsubscribe/${data.endpoint}`);
+    return this.request<void>(
+      `/api/webpush/unsubscribe/${encodeURIComponent(data.endpoint)}`,
+    );
   }
 
   async subscribeWebPush(data: {
@@ -714,8 +678,11 @@ class ApiClient {
     });
   }
 
+  // FIXED: Added encodeURIComponent to retain complex structures inside the URL path parameter[cite: 4]
   async verifyWebPushSubscription(data: { endpoint: string }) {
-    return this.request<void>(`/api/webpush/verify/${data.endpoint}`);
+    return this.request<void>(
+      `/api/webpush/verify/${encodeURIComponent(data.endpoint)}`,
+    );
   }
 
   async sendWebPushNotification(data: {
@@ -728,12 +695,13 @@ class ApiClient {
     });
   }
 
+  // FIXED: Added encodeURIComponent to prevent slashes from modifying path segmentation[cite: 4]
   async getWebPushSubscription(data: { endpoint: string }) {
     return this.request<void>(
-      `/api/admin/webpush/subscriptions/${data.endpoint}`,
+      `/api/admin/webpush/subscriptions/${encodeURIComponent(data.endpoint)}`,
     );
   }
-  // Website Builder
+
   async getAllWebsiteConfig() {
     const url = `/api/website-builder`;
     return this.request<WebsiteConfig[]>(url, {
@@ -758,7 +726,6 @@ class ApiClient {
     );
   }
 
-  // setup
   async getSetupStatus() {
     return this.request<SetupStatus>(`/api/setup/status`);
   }

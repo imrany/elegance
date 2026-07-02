@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"text/template"
 	"time"
@@ -32,7 +33,6 @@ type Config struct {
 	JWTSecret string
 }
 
-// SEOMetadata holds the metadata for SEO
 type SEOMetadata struct {
 	Title       string
 	Description string
@@ -46,7 +46,6 @@ type SEOMetadata struct {
 	TwitterSite string
 }
 
-// Server represents the HTTP server
 type Server struct {
 	config    *Config
 	router    *gin.Engine
@@ -55,9 +54,7 @@ type Server struct {
 	indexTmpl *template.Template
 }
 
-// New creates a new server instance
 func New(cfg *Config, db database.DB) *Server {
-	// Set Gin mode
 	if cfg.Server.Host == "0.0.0.0" {
 		gin.SetMode(gin.ReleaseMode)
 	} else {
@@ -66,13 +63,11 @@ func New(cfg *Config, db database.DB) *Server {
 
 	router := gin.New()
 
-	// Middleware
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
 
-	// CORS middleware
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"*"}, // TODO: Configure specific origins in production
+		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Accept"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -82,13 +77,11 @@ func New(cfg *Config, db database.DB) *Server {
 
 	handler := handlers.New(db, cfg.JWTSecret)
 
-	// Load and parse index.html from embedded dist
 	indexContent, err := elegance.DistFS.ReadFile("dist/index.html")
 	if err != nil {
 		log.Fatalf("Critical: Could not read dist/index.html: %v", err)
 	}
 
-	// Create template (use Delims if your React code uses {{}})
 	tmpl, err := template.New("index").Parse(string(indexContent))
 	if err != nil {
 		log.Fatalf("Critical: Failed to parse index template: %v", err)
@@ -106,60 +99,48 @@ func New(cfg *Config, db database.DB) *Server {
 	return srv
 }
 
-// setupRoutes configures all API routes
 func (s *Server) setupRoutes() {
-	// Static assets
 	s.router.Static("/uploads", viper.GetString("upload-dir"))
 
-	// SEO routes
 	s.router.GET("/sitemap.xml", s.serveSitemap)
 	s.router.GET("/robots.txt", s.serveRobotsTxt)
 	s.router.GET("/manifest.json", s.serveManifestJSON)
 
-	// API v1 routes
 	api := s.router.Group("/api")
 	{
 		api.GET("", s.handleRoot)
-
-		// Health check
 		api.GET("/health", s.handleHealth)
 
-		// website builder endpoints (public)
 		websiteBuilder := api.Group("/website-builder")
 		{
 			websiteBuilder.GET("", s.handler.GetAllWebsiteConfig)
 			websiteBuilder.GET("/:key", s.handler.GetWebsiteConfig)
 		}
 
-		// Pages endpoints (public)
 		pages := api.Group("/pages")
 		{
 			pages.GET("", s.handler.GetPages)
 			pages.GET("/:id", s.handler.GetPage)
 		}
 
-		// Auth endpoints (public)
 		auth := api.Group("/auth")
 		{
 			auth.POST("/signup", s.handler.SignUp)
 			auth.POST("/signin", s.handler.SignIn)
 		}
 
-		// Setup endpoints (public)
 		setup := api.Group("/setup")
 		{
 			setup.GET("/status", s.handler.GetSetupStatus)
 			setup.POST("/admin", s.handler.CreateInitialAdmin)
 		}
 
-		// Categories (public)
 		categories := api.Group("/categories")
 		{
 			categories.GET("", s.handler.GetCategories)
 			categories.GET("/:slug", s.handler.GetCategoryBySlug)
 		}
 
-		//email subscription
 		email := api.Group("/email")
 		{
 			email.POST("/subscribe", s.handler.SubscribeEmail)
@@ -168,7 +149,6 @@ func (s *Server) setupRoutes() {
 			email.GET("/unsubscribe/:email", s.handler.UnsubscribeEmail)
 		}
 
-		// Products (public)
 		products := api.Group("/products")
 		{
 			products.GET("", s.handler.GetProducts)
@@ -177,14 +157,15 @@ func (s *Server) setupRoutes() {
 			products.GET("/:slug", s.handler.GetProductBySlug)
 		}
 
-		// webpush (public)
+		// Webpush configuration
 		webpush := api.Group("/webpush")
 		{
 			webpush.POST("/subscribe", s.handler.SubscribeToPushNotification)
-			webpush.GET("/unsubscribe/:endpoint", s.handler.UnsubscribeToPushNotification)
-			webpush.GET("/verify/:endpoint", s.handler.VerifySubscription)
+			// FIXED: Changed from :endpoint to *endpoint to support encoded slashes
+			webpush.GET("/unsubscribe/*endpoint", s.handler.UnsubscribeToPushNotification)
+			webpush.GET("/verify/*endpoint", s.handler.VerifySubscription)
 		}
-		// Protected routes (require authentication)
+
 		authenticated := api.Group("")
 		authenticated.Use(middleware.AuthMiddleware(s.config.JWTSecret))
 		{
@@ -192,21 +173,18 @@ func (s *Server) setupRoutes() {
 			authenticated.PUT("/auth/me", s.handler.UpdateUserAccount)
 			authenticated.PUT("/auth/me/password", s.handler.ChangeUserPassword)
 
-			// Orders
 			authenticated.POST("/orders", s.handler.CreateOrder)
 			authenticated.GET("/orders", s.handler.GetOrdersByOption)
 			authenticated.DELETE("/orders/:id", s.handler.DeleteOrder)
 			authenticated.PUT("/orders/:id", s.handler.UpdateOrder)
 		}
 
-		// Admin routes (require admin role)
 		admin := api.Group("/admin")
 		admin.Use(middleware.AuthMiddleware(s.config.JWTSecret), middleware.AdminOnly())
 		{
-
-			email := admin.Group("/email")
+			emailAdmin := admin.Group("/email")
 			{
-				email.GET("/subscriptions", s.handler.GetEmailSubscriptions)
+				emailAdmin.GET("/subscriptions", s.handler.GetEmailSubscriptions)
 			}
 
 			smtp := admin.Group("/smtp")
@@ -214,27 +192,25 @@ func (s *Server) setupRoutes() {
 				smtp.GET("/test", s.handler.TestSmtpConnection)
 				smtp.POST("/compose", s.handler.ComposeEmail)
 			}
-			webpush := admin.Group("/webpush")
+
+			webpushAdmin := admin.Group("/webpush")
 			{
-				webpush.POST("/send", s.handler.SendPushNotification)
-				webpush.GET("/subscriptions/:endpoint", s.handler.GetSubscription)
+				webpushAdmin.POST("/send", s.handler.SendPushNotification)
+				// FIXED: Changed from :endpoint to *endpoint to support encoded slashes
+				webpushAdmin.GET("/subscriptions/*endpoint", s.handler.GetSubscription)
 			}
 
-			// User management
 			admin.GET("/users", s.handler.GetAllUsers)
 			admin.PUT("/users/:id/role", s.handler.UpdateUserRole)
 			admin.DELETE("/users/:id", s.handler.DeleteUser)
 
-			// Category management
 			admin.POST("/categories", s.handler.CreateCategory)
 			admin.PUT("/categories/:slug", s.handler.UpdateCategory)
 			admin.DELETE("/categories/:unique_value", s.handler.DeleteCategory)
 
-			// Orders management
 			admin.GET("/orders", s.handler.GetAllOrders)
 			admin.PUT("/orders/:id/status", s.handler.UpdateOrderStatus)
 
-			// Products management
 			admin.GET("/products", s.handler.GetAllProducts)
 			admin.POST("/products", s.handler.CreateProduct)
 			admin.PUT("/products/:id", s.handler.UpdateProduct)
@@ -243,14 +219,11 @@ func (s *Server) setupRoutes() {
 			admin.PUT("/users/password", s.handler.UpdateUserPassword)
 			admin.PUT("/users", s.handler.UpdateUser)
 
-			// Website builder management
 			admin.PUT("/website-builder/:key", s.handler.UpdateWebsiteSetting)
 
-			// Images management
 			admin.POST("/upload/image", s.handler.UploadImage)
 			admin.DELETE("/images/:filename", s.handler.DeleteImage)
 
-			// Pages management
 			admin.POST("/pages", s.handler.CreatePage)
 			admin.PUT("/pages/:id", s.handler.UpdatePage)
 			admin.DELETE("/pages/:id", s.handler.DeletePage)
@@ -261,13 +234,10 @@ func (s *Server) setupRoutes() {
 		}
 	}
 
-	// Frontend SPA Routing - Serve embedded dist folder
 	s.setupSPARouting()
 }
 
-// serveStaticIndex serves the static index.html with SEO
 func (s *Server) serveStaticIndex(c *gin.Context) {
-	// 1. Fetch Global Configs
 	var seo models.SEOConfig
 	var store models.StoreConfig
 
@@ -278,7 +248,6 @@ func (s *Server) serveStaticIndex(c *gin.Context) {
 		json.Unmarshal([]byte(val.Value), &store)
 	}
 
-	// 2. Setup Default Metadata
 	scheme := "https"
 	if c.Request.TLS == nil {
 		scheme = "http"
@@ -296,7 +265,6 @@ func (s *Server) serveStaticIndex(c *gin.Context) {
 		Type:        "website",
 	}
 
-	// 3. Dynamic Product/Page Logic
 	path := c.Request.URL.Path
 	if strings.HasPrefix(path, "/products/") {
 		slug := strings.TrimPrefix(path, "/products/")
@@ -310,7 +278,6 @@ func (s *Server) serveStaticIndex(c *gin.Context) {
 			}
 		}
 	} else if path != "/" && !strings.HasPrefix(path, "/admin") {
-		// Handle custom CMS pages
 		slug := strings.TrimPrefix(path, "/")
 		if page, err := s.db.GetPage(slug); err == nil {
 			metadata.Title = page.MetaTitle
@@ -321,7 +288,6 @@ func (s *Server) serveStaticIndex(c *gin.Context) {
 		}
 	}
 
-	// 4. Set Headers and Execute Template
 	c.Header("Content-Type", "text/html; charset=utf-8")
 	err := s.indexTmpl.Execute(c.Writer, metadata)
 	if err != nil {
@@ -330,7 +296,6 @@ func (s *Server) serveStaticIndex(c *gin.Context) {
 	}
 }
 
-// ServeSitemap generates and serves sitemap.xml
 func (s *Server) serveSitemap(c *gin.Context) {
 	scheme := "https"
 	if c.Request.TLS == nil {
@@ -338,7 +303,6 @@ func (s *Server) serveSitemap(c *gin.Context) {
 	}
 	baseURL := scheme + "://" + c.Request.Host
 
-	// Start sitemap XML
 	xml := `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 	<url>
@@ -347,7 +311,6 @@ func (s *Server) serveSitemap(c *gin.Context) {
 		<priority>1.0</priority>
 	</url>`
 
-	// Add product pages
 	products, err := s.db.GetProducts(models.ProductFilters{})
 	if err == nil {
 		for _, product := range products {
@@ -360,7 +323,6 @@ func (s *Server) serveSitemap(c *gin.Context) {
 		}
 	}
 
-	// Add category pages
 	categories, err := s.db.GetCategories()
 	if err == nil {
 		for _, category := range categories {
@@ -380,7 +342,6 @@ func (s *Server) serveSitemap(c *gin.Context) {
 	c.String(http.StatusOK, xml)
 }
 
-// serveRobotsTxt serves robots.txt
 func (s *Server) serveRobotsTxt(c *gin.Context) {
 	scheme := "https"
 	if c.Request.TLS == nil {
@@ -400,7 +361,6 @@ Sitemap: ` + baseURL + `/sitemap.xml`
 	c.String(http.StatusOK, robots)
 }
 
-// serveManifest serves manifest.json
 func (s *Server) serveManifestJSON(c *gin.Context) {
 	settings, err := s.db.GetWebsiteSettingByKey("store")
 	if err != nil {
@@ -408,7 +368,6 @@ func (s *Server) serveManifestJSON(c *gin.Context) {
 		return
 	}
 
-	//parse settings.Value string into SmtpConfig
 	store := models.StoreConfig{}
 	if err := json.Unmarshal([]byte(settings.Value), &store); err != nil {
 		log.Printf("Failed to parse store value %s", err.Error())
@@ -431,42 +390,32 @@ func (s *Server) serveManifestJSON(c *gin.Context) {
 	c.String(http.StatusOK, manifest)
 }
 
-// setupSPARouting configures the SPA routing for the embedded frontend
 func (s *Server) setupSPARouting() {
-	// Get the embedded dist filesystem
 	distFS, err := fs.Sub(elegance.DistFS, "dist")
 	if err != nil {
 		log.Fatal("Failed to load embedded dist folder: ", err)
 	}
 
-	// Create file server for static assets
 	fileServer := http.FileServer(http.FS(distFS))
 
-	// Handle all remaining routes for SPA
 	s.router.NoRoute(func(c *gin.Context) {
 		path := c.Request.URL.Path
 
-		// Check if the requested path is a static file (has an extension)
 		if isStaticFile(path) {
-			// Try to open the file from embedded FS
 			_, err := distFS.Open(strings.TrimPrefix(path, "/"))
 			if err == nil {
-				// File exists, serve it
 				c.Request.URL.Path = path
 				fileServer.ServeHTTP(c.Writer, c.Request)
 				return
 			}
-			// File doesn't exist, return 404
 			c.Status(http.StatusNotFound)
 			return
 		}
 
-		// For all other routes (SPA routes), serve index.html with dynamic SEO
 		s.serveStaticIndex(c)
 	})
 }
 
-// isStaticFile checks if the path looks like a static file
 func isStaticFile(path string) bool {
 	ext := filepath.Ext(path)
 	staticExtensions := []string{
@@ -483,21 +432,38 @@ func isStaticFile(path string) bool {
 	return false
 }
 
-// handleHealth handles health check requests
+func getVersion() string {
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return "unknown"
+	}
+
+	if info.Main.Version != "(devel)" {
+		return info.Main.Version
+	}
+
+	for _, setting := range info.Settings {
+		if setting.Key == "vcs.revision" {
+			return setting.Value
+		}
+	}
+
+	return "dev"
+}
+
 func (s *Server) handleHealth(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status":    "ok",
 		"timestamp": time.Now().Unix(),
 		"database":  s.config.DBType,
-		"version":   "0.3.0",
+		"version":   getVersion(),
 	})
 }
 
-// handleRoot handles root endpoint requests
 func (s *Server) handleRoot(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": "ELEGANCE API",
-		"version": "0.3.2",
+		"version": getVersion(),
 		"endpoints": map[string]string{
 			"health":          "GET /api/health",
 			"categories":      "GET /api/categories",
@@ -513,10 +479,10 @@ func (s *Server) handleRoot(c *gin.Context) {
 	})
 }
 
-// Start starts the HTTP server
 func (s *Server) Start() error {
 	addr := fmt.Sprintf("%s:%d", s.config.Server.Host, s.config.Server.Port)
 	log.Printf("🚀 Server starting on %s", addr)
+	log.Printf(" Version: %s", getVersion())
 	log.Printf(" Health check: http://%s/api/health", addr)
 	log.Printf(" API endpoint: http://%s/api", addr)
 	log.Printf(" Sitemap: http://%s/sitemap.xml", addr)
