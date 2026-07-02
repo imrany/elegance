@@ -299,16 +299,20 @@ export default function UsersPage() {
                             })}
                           </TableCell>
                           <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleViewUserDetails(user)}
-                              >
-                                <UserCog className="h-4 w-4 mr-1" />
-                                Manage
-                              </Button>
-                            </div>
+                            {user &&
+                              (!user.is_initial_admin ||
+                                owner.id === user.id) && (
+                                <div className="flex justify-end gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleViewUserDetails(user)}
+                                  >
+                                    <UserCog className="h-4 w-4 mr-1" />
+                                    Manage
+                                  </Button>
+                                </div>
+                              )}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -437,17 +441,21 @@ export default function UsersPage() {
                 </CardContent>
               </Card>
 
-              {owner.id !== selectedUser.id && (
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setIsDialogOpen(true);
-                    }}
-                  >
-                    <UserCog className="h-4 w-4 mr-2" />
-                    Change Role
-                  </Button>
+              <div className="flex gap-2">
+                {owner &&
+                  owner.is_initial_admin &&
+                  !selectedUser.is_initial_admin && (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsDialogOpen(true);
+                      }}
+                    >
+                      <UserCog className="h-4 w-4 mr-2" />
+                      Change Role
+                    </Button>
+                  )}
+                {(owner.id === selectedUser.id || owner.is_initial_admin) && (
                   <Button
                     variant="destructive"
                     onClick={() => {
@@ -457,8 +465,8 @@ export default function UsersPage() {
                     <Trash2 className="h-4 w-4 mr-2" />
                     Delete User
                   </Button>
-                </div>
-              )}
+                )}
+              </div>
             </TabsContent>
 
             {/* Orders Tab */}

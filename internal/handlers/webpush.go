@@ -28,7 +28,7 @@ type NotificationPayload struct {
 
 // SendNotificationRequest for sending to specific users
 type SendNotificationRequest struct {
-	Endpoints []string            `json:"endpoints,omitempty"` // If empty, sends to all
+	Endpoints *[]string           `json:"endpoints,omitempty"` // If empty, sends to all
 	Payload   NotificationPayload `json:"payload"`
 }
 
@@ -64,7 +64,26 @@ func (s *Handler) SubscribeToPushNotification(c *gin.Context) {
 		return
 	}
 
-	slog.Info("Subscription saved successfully", "endpoint", sub.Endpoint)
+	settings, err := s.db.GetWebsiteSettingByKey("store")
+	if err != nil {
+		slog.Error("Failed to get websetting by key", "key", "store", "error", err)
+	}
+	//parse settings.Value string into StoreConfig
+	store := models.StoreConfig{}
+	if err := json.Unmarshal([]byte(settings.Value), &store); err != nil {
+		slog.Error("Failed to unmarshal store", "error", err)
+	}
+
+	_, err = s.SendPush(NotificationPayload{
+		Title:              "🔔 Thanks for subscribing to Elegance",
+		Icon:               fmt.Sprintf("%s", store.Logo),
+		Body:               "You'll now get new product updates, features and news.",
+		Data:               map[string]any{"url": "/"},
+		RequireInteraction: false,
+	}, &[]string{sub.Endpoint})
+	if err != nil {
+		slog.Error("Failed to sendPush", "error", err.Error())
+	}
 
 	utils.SendResponse(c, utils.Response{
 		Status:  http.StatusCreated,
@@ -104,42 +123,65 @@ func (s *Handler) SendPushNotification(c *gin.Context) {
 		return
 	}
 
-	// Get subscriptions
-	var subscriptions []models.PushSubscription
-	for _, e := range req.Endpoints {
-		subscription, err := s.db.GetSubscriptionByEndpoint(e)
-		if err != nil {
-			slog.Error("Failed to get subscriptions", "Error", err)
-			continue // Avoid crashing
-		}
-		// FIXED: Check for nil pointers to prevent application runtime panics
-		if subscription != nil {
-			subscriptions = append(subscriptions, *subscription)
-		}
-	}
-
-	if len(subscriptions) == 0 {
-		utils.SendResponse(c, utils.Response{
-			Status:  http.StatusOK,
-			Success: true,
-			Data: map[string]any{
-				"success": 0,
-				"failed":  0,
-				"message": "No subscriptions found",
-			},
-		})
-		return
-	}
-
-	// Convert payload to JSON
-	data, err := json.Marshal(req.Payload)
+	sendPushResponse, err := s.SendPush(req.Payload, req.Endpoints)
 	if err != nil {
 		utils.SendResponse(c, utils.Response{
-			Status:  http.StatusInternalServerError,
+			Status:  http.StatusBadRequest,
 			Success: false,
 			Message: err.Error(),
 		})
 		return
+	}
+
+	utils.SendResponse(c, utils.Response{
+		Status:  http.StatusOK, // Expressly specified standard status code
+		Success: sendPushResponse.SuccessCount > 0,
+		Message: sendPushResponse.Message,
+		Data: map[string]any{
+			"sent":             sendPushResponse.SuccessCount,
+			"failed":           sendPushResponse.FailureCount,
+			"failed_endpoints": sendPushResponse.FailedEndpoints,
+		},
+	})
+}
+
+type SendPushResponse struct {
+	SuccessCount    int
+	FailureCount    int
+	FailedEndpoints []string
+	Message         string
+}
+
+// SendPush - a helper function for send push notifications
+func (s *Handler) SendPush(payload NotificationPayload, endpoints *[]string) (*SendPushResponse, error) {
+	var subscriptions []models.PushSubscription
+	if endpoints != nil {
+		for _, e := range *endpoints {
+			subscription, err := s.db.GetSubscriptionByEndpoint(e)
+			if err != nil {
+				return nil, fmt.Errorf("Failed to get subscriptions: %s", err.Error())
+			}
+			// FIXED: Check for nil pointers to prevent application runtime panics
+			if subscription != nil {
+				subscriptions = append(subscriptions, *subscription)
+			}
+		}
+	} else {
+		var err error
+		subscriptions, err = s.db.GetAllSubscriptions()
+		if err != nil {
+			return nil, fmt.Errorf("Failed to get subscriptions :%s", err.Error())
+		}
+	}
+
+	if len(subscriptions) == 0 {
+		return nil, fmt.Errorf("No subscripton found")
+	}
+
+	// Convert payload to JSON
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return nil, err
 	}
 
 	successCount := 0
@@ -161,21 +203,19 @@ func (s *Handler) SendPushNotification(c *gin.Context) {
 		})
 
 		if err != nil {
-			slog.Info("Failed to send notification", "Endpoint", sub.Endpoint, "Error", err, "request", req)
 			failureCount++
 			failedEndpoints = append(failedEndpoints, sub.Endpoint)
 
 			// Delete invalid subscriptions (410 Gone or 404 Not Found)
 			if resp != nil && (resp.StatusCode == http.StatusGone || resp.StatusCode == http.StatusNotFound) {
 				s.db.DeleteSubscription(sub.Endpoint)
-				slog.Info("Deleted invalid subscription", "Endpoint", sub.Endpoint)
+				return nil, fmt.Errorf("Deleted invalid subscription: %s", err.Error())
 			}
 		} else {
 			resp.Body.Close()
 			if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 				successCount++
 			} else {
-				slog.Info("Push failed", "Status", resp.StatusCode, "Endpoint", sub.Endpoint)
 				failureCount++
 				failedEndpoints = append(failedEndpoints, sub.Endpoint)
 			}
@@ -186,16 +226,13 @@ func (s *Handler) SendPushNotification(c *gin.Context) {
 	if successCount > 0 {
 		message = "Push notifications sent"
 	}
-	utils.SendResponse(c, utils.Response{
-		Status:  http.StatusOK, // Expressly specified standard status code
-		Success: successCount > 0,
-		Message: message,
-		Data: map[string]any{
-			"sent":             successCount,
-			"failed":           failureCount,
-			"failed_endpoints": failedEndpoints,
-		},
-	})
+
+	return &SendPushResponse{
+		SuccessCount:    successCount,
+		FailureCount:    failureCount,
+		FailedEndpoints: failedEndpoints,
+		Message:         message,
+	}, nil
 }
 
 // GetSubscription -  Get subscriptions

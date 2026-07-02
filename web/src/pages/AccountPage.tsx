@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -165,6 +165,11 @@ export default function AccountPage() {
     changePasswordMutation.mutate(passwordData);
   };
 
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    scrollRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, []);
+
   // Guard Clause: Safely blocks downstream null runtime executions
   if (!user) {
     return (
@@ -179,6 +184,7 @@ export default function AccountPage() {
   return (
     <Layout>
       <div className="container py-12">
+        <div ref={scrollRef}></div>
         {/* Header */}
         <div>
           <h1 className="font-serif text-2xl font-light text-foreground md:text-3xl">

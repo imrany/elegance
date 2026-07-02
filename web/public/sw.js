@@ -24,7 +24,7 @@ self.addEventListener("push", function (event) {
     actions: data.actions || [],
     silent: false,
     tag: data.tag || "default-tag",
-    requireInteraction: data.require_interaction || true,
+    requireInteraction: data.require_interaction ?? true,
     data: data.data || {},
     vibrate: [100, 50, 100],
   };
@@ -38,7 +38,9 @@ self.addEventListener("notificationclick", (event) => {
   console.log("Notification clicked:", event.notification);
   event.notification.close();
 
-  const link = event.notification.data.url || "/";
+  //  Standardize route to absolute URL layout using current application origin so absolute and relative formats match during identification
+  const link = new URL(event.notification.data.url || "/", self.location.origin)
+    .href;
   const action = event.action;
 
   if (action) {

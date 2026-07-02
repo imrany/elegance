@@ -23,15 +23,16 @@ type WebPushSubscription struct {
 
 // User represents a user
 type User struct {
-	ID          string    `json:"id" db:"id"`
-	Email       string    `json:"email" db:"email"`
-	FirstName   string    `json:"first_name" db:"first_name"`
-	LastName    string    `json:"last_name" db:"last_name"`
-	PhoneNumber string    `json:"phone_number" db:"phone_number"`
-	Password    string    `json:"-" db:"password"` // Never expose password in JSON
-	Role        string    `json:"role" db:"role"`
-	CreatedAt   time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
+	ID             string    `json:"id" db:"id"`
+	Email          string    `json:"email" db:"email"`
+	FirstName      string    `json:"first_name" db:"first_name"`
+	LastName       string    `json:"last_name" db:"last_name"`
+	PhoneNumber    string    `json:"phone_number" db:"phone_number"`
+	Password       string    `json:"-" db:"password"` // Never expose password in JSON
+	Role           string    `json:"role" db:"role"`
+	CreatedAt      time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at" db:"updated_at"`
+	IsInitialAdmin bool      `json:"is_initial_admin" db:"is_initial_admin"`
 }
 
 // Category represents a product category

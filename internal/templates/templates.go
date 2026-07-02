@@ -32,6 +32,7 @@ type TemplateData struct {
 	ProductImage    string
 	ProductPrice    string
 	OrderID         string
+	OrderStatus     string
 	OrderTotal      string
 	OrderItems      []OrderItem
 	ShippingAddress string
@@ -229,4 +230,4 @@ func ParseHTMLTemplate(tmplType EmailTemplateType, data TemplateData) (string, e
 const welcomeTemplate = `{{ define "body" }}<h1 class="title">Welcome</h1><p class="text">Welcome to {{ .StoreName }}, {{ .ClientName }}.</p>{{ end }}`
 const otpTemplate = `{{ define "body" }}<h1 class="title">Verification</h1><p class="text">Your code is {{ .OTPCode }}.</p>{{ end }}`
 const productNewsletterTemplate = `{{ define "body" }}<h1 class="title">{{ .ProductName }}</h1><p class="text">{{ .ProductDesc }}</p>{{ end }}`
-const orderConfirmationTemplate = `{{ define "body" }}<h1 class="title">Order Confirmed</h1><p class="text">Order {{ .OrderID }} status verified.</p>{{ end }}`
+const orderConfirmationTemplate = `{{ define "body" }}<h1 class="title">Order Confirmed</h1><p class="text">Order {{ .OrderID }} status {{.OrderStatus}}.</p>{{ end }}`

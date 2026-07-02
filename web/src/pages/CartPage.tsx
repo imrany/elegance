@@ -4,7 +4,7 @@ import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
 import { formatPrice } from "@/lib/utils";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity, subtotal, clearCart } = useCart();
@@ -17,18 +17,16 @@ export default function CartPage() {
   const totalItemsCount = items.reduce((acc, item) => acc + item.quantity, 0);
   const remainderToFreeShipping = FREE_SHIPPING_THRESHOLD - subtotal;
 
+  const scrollRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
-    window.scrollTo({
-      top: 0,
-      left: 0,
-      behavior: "smooth",
-    });
+    scrollRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
   }, []);
 
   if (items.length === 0) {
     return (
       <Layout>
         <div className="container py-20">
+          <div ref={scrollRef}></div>
           <div className="mx-auto max-w-md text-center">
             <ShoppingBag className="mx-auto h-16 w-16 text-muted-foreground/60" />
             <h1 className="mt-6 font-serif text-2xl font-light text-foreground">

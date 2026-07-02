@@ -112,16 +112,6 @@ export function usePushNotifications() {
       setIsSubscribed(true);
       setIsLoading(false);
       fireFireworks();
-
-      await api.sendWebPushNotification({
-        endpoints: [subscription.endpoint],
-        payload: {
-          title: "🔔 Thanks for subscribing to Elegance",
-          body: "Welcome",
-          data: { url: "/" },
-          require_interaction: false,
-        },
-      });
       return true;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {

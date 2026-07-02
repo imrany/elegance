@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
     first_name TEXT NOT NULL,
     last_name TEXT NOT NULL,
     role TEXT NOT NULL DEFAULT 'user',
+    is_initial_admin BOOLEAN DEFAULT false,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CHECK (role IN ('user', 'admin'))

@@ -10,11 +10,11 @@ import {
   User,
   UsersRound,
   ToolCase,
-  MailQuestionMarkIcon,
+  MailQuestion,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useGeneralContext } from "@/contexts/GeneralContext";
 
@@ -25,24 +25,33 @@ export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { websiteConfig } = useGeneralContext();
   const store = websiteConfig?.store;
-  const siteName = store.name || "[Your Store Name]";
+  const siteName = store?.name || "[Your Store Name]";
   const smtp = websiteConfig?.smtp;
 
-  const navItems = [
-    { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
-    { name: "Account", href: "/admin/account", icon: User },
-    { name: "Products", href: "/admin/products", icon: Package },
-    { name: "Orders", href: "/admin/orders", icon: ShoppingCart },
-    { name: "Users", href: "/admin/users", icon: UsersRound },
-    smtp &&
-      smtp.is_configured && {
-        name: "Email Subscriptions",
-        href: "/admin/email-subscriptions",
-        icon: MailQuestionMarkIcon,
+  const navItems = useCallback(() => {
+    return [
+      { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
+      { name: "Account", href: "/admin/account", icon: User },
+      { name: "Products", href: "/admin/products", icon: Package },
+      { name: "Orders", href: "/admin/orders", icon: ShoppingCart },
+      { name: "Users", href: "/admin/users", icon: UsersRound },
+      ...(smtp?.is_configured
+        ? [
+            {
+              name: "Email Subscriptions",
+              href: "/admin/email-subscriptions",
+              icon: MailQuestion,
+            },
+          ]
+        : []),
+      { name: "Settings", href: "/admin/settings", icon: Settings },
+      {
+        name: "Website Builder",
+        href: "/admin/website-builder",
+        icon: ToolCase,
       },
-    { name: "Settings", href: "/admin/settings", icon: Settings },
-    { name: "Website Builder", href: "/admin/website-builder", icon: ToolCase },
-  ];
+    ];
+  }, [smtp]);
 
   useEffect(() => {
     if (!isLoading) {
@@ -103,7 +112,7 @@ export default function AdminLayout() {
 
           {/* Navigation */}
           <nav className="flex-1 space-y-1 p-4">
-            {navItems.map((item) => {
+            {navItems().map((item) => {
               const isActive = location.pathname === item.href;
               return (
                 <Link

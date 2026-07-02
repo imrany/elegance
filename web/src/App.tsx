@@ -18,7 +18,7 @@ import ProductPage from "./pages/ProductPage";
 import CartPage from "./pages/CartPage";
 import AuthPage from "./pages/AuthPage";
 import AboutUs from "./pages/AboutUs";
-import { ProductListingPage } from "./pages/ProductListingPage";
+import { ProductsPage } from "./pages/ProductsPage";
 import { FAQsPage } from "./pages/FAQsPage";
 import { GuidePage } from "./pages/GuidePage";
 import CheckoutPage from "./pages/CheckoutPage";
@@ -32,7 +32,6 @@ import ServerError from "./pages/ServerError";
 // Admin System Views
 import AdminLayout from "./pages/admin/AdminLayout";
 import DashboardPage from "./pages/admin/DashboardPage";
-import ProductsPage from "./pages/admin/ProductsPage";
 import OrdersAdminPage from "./pages/admin/OrdersAdminPage";
 import SettingsPage from "./pages/admin/SettingsPage";
 import UsersPage from "./pages/admin/UsersPage";
@@ -41,6 +40,7 @@ import WebsiteBuilder from "./pages/admin/website-builder/WebsiteBuilder";
 import PageBuilder from "./pages/admin/page-builder/PageBuilder";
 import PageEditor from "./pages/admin/page-builder/PageEditor";
 import PageRenderer from "./pages/admin/page-builder/PageRender";
+import AdminProductsPage from "./pages/admin/ProductsPage";
 import EmailSubscriptionsAdminPage from "./pages/admin/EmailSubscriptions";
 
 export default function App() {
@@ -116,10 +116,7 @@ export default function App() {
                       <Route path="/faqs" element={<FAQsPage />} />
                       <Route path="/guide" element={<GuidePage />} />
                       <Route path="/about-us" element={<AboutUs />} />
-                      <Route
-                        path="/products"
-                        element={<ProductListingPage />}
-                      />
+                      <Route path="/products" element={<ProductsPage />} />
                       <Route path="/cart" element={<CartPage />} />
                       <Route
                         path="/category/:slug"
@@ -181,7 +178,10 @@ export default function App() {
                         }
                       >
                         <Route index element={<DashboardPage />} />
-                        <Route path="products" element={<ProductsPage />} />
+                        <Route
+                          path="products"
+                          element={<AdminProductsPage />}
+                        />
                         <Route path="orders" element={<OrdersAdminPage />} />
                         <Route
                           path="website-builder"

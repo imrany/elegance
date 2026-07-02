@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
-	"runtime/debug"
 	"strings"
 	"text/template"
 	"time"
@@ -145,7 +144,6 @@ func (s *Server) setupRoutes() {
 		{
 			email.POST("/subscribe", s.handler.SubscribeEmail)
 			email.GET("/subscriptions/:email", s.handler.GetEmailSubscription)
-			email.DELETE("/unsubscribe/:email", s.handler.UnsubscribeEmail)
 			email.GET("/unsubscribe/:email", s.handler.UnsubscribeEmail)
 		}
 
@@ -185,6 +183,7 @@ func (s *Server) setupRoutes() {
 			emailAdmin := admin.Group("/email")
 			{
 				emailAdmin.GET("/subscriptions", s.handler.GetEmailSubscriptions)
+				emailAdmin.DELETE("/unsubscribe/:email", s.handler.UnsubscribeEmail)
 			}
 
 			smtp := admin.Group("/smtp")
@@ -258,11 +257,16 @@ func (s *Server) serveStaticIndex(c *gin.Context) {
 		Title:       seo.Title,
 		Description: seo.Description,
 		Keywords:    seo.Keywords,
-		OGImage:     baseURL + seo.OGImage,
+		OGImage:     seo.OGImage,
 		Favicon:     seo.Favicon,
 		Author:      store.Name,
-		URL:         baseURL + c.Request.URL.Path,
-		Type:        "website",
+		URL: func() string {
+			if c.Request.URL.Path == "/" {
+				return baseURL
+			}
+			return baseURL + c.Request.URL.Path
+		}(),
+		Type: "website",
 	}
 
 	path := c.Request.URL.Path
@@ -376,9 +380,9 @@ func (s *Server) serveManifestJSON(c *gin.Context) {
 
 	manifest := `
 {
-  "short_name": ` + store.Name + `,
-  "name": ` + store.Name + `,
-  "description": ` + store.Description + `,
+  "short_name": "` + store.Name + `",
+  "name": "` + store.Name + `",
+  "description": "` + store.Description + `",
   "start_url": "/",
   "id": "/",
   "background_color": "#FFFF",
@@ -432,38 +436,21 @@ func isStaticFile(path string) bool {
 	return false
 }
 
-func getVersion() string {
-	info, ok := debug.ReadBuildInfo()
-	if !ok {
-		return "unknown"
-	}
-
-	if info.Main.Version != "(devel)" {
-		return info.Main.Version
-	}
-
-	for _, setting := range info.Settings {
-		if setting.Key == "vcs.revision" {
-			return setting.Value
-		}
-	}
-
-	return "dev"
-}
+var Version = "dev"
 
 func (s *Server) handleHealth(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status":    "ok",
 		"timestamp": time.Now().Unix(),
 		"database":  s.config.DBType,
-		"version":   getVersion(),
+		"version":   Version,
 	})
 }
 
 func (s *Server) handleRoot(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": "ELEGANCE API",
-		"version": getVersion(),
+		"version": Version,
 		"endpoints": map[string]string{
 			"health":          "GET /api/health",
 			"categories":      "GET /api/categories",
@@ -482,7 +469,7 @@ func (s *Server) handleRoot(c *gin.Context) {
 func (s *Server) Start() error {
 	addr := fmt.Sprintf("%s:%d", s.config.Server.Host, s.config.Server.Port)
 	log.Printf("🚀 Server starting on %s", addr)
-	log.Printf(" Version: %s", getVersion())
+	log.Printf(" Version: %s", Version)
 	log.Printf(" Health check: http://%s/api/health", addr)
 	log.Printf(" API endpoint: http://%s/api", addr)
 	log.Printf(" Sitemap: http://%s/sitemap.xml", addr)

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
@@ -96,9 +96,10 @@ export default function CheckoutPage() {
   }, [items.length, navigate]);
 
   // Scroll to top
+  const scrollRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }, []);
+    scrollRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [items.length]);
 
   // Clear cache on successful order
   const clearCache = () => {
@@ -232,6 +233,7 @@ export default function CheckoutPage() {
   return (
     <Layout>
       <div className="container py-12">
+        <div ref={scrollRef}></div>
         {/* Header */}
         <div className="mb-8">
           <Button variant="ghost" size="sm" asChild className="mb-4">

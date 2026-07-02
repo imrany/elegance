@@ -3,14 +3,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import {
-  Search,
-  Mail,
-  Download,
-  UserCheck,
-  MoreVertical,
-  Users,
-} from "lucide-react";
+import { Search, Mail, UserCheck, MoreVertical, Users } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -56,7 +49,10 @@ export default function EmailSubscriptionsAdminPage() {
   // Fetch subscriptions
   const { data: subscriptions, isLoading } = useQuery({
     queryKey: ["admin-email-subscriptions"],
-    queryFn: api.getSubscriptions,
+    queryFn: async () => {
+      const data = await api.getEmailSubscriptions();
+      return data;
+    },
   });
 
   // Compose / Send Email Mutation

@@ -275,7 +275,7 @@ export function Header() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="text-accent hover:text-accent/80"
+                  className="text-accent hover:text-accent/50"
                 >
                   <BellRing className="h-5 w-5" />
                 </Button>

@@ -104,7 +104,7 @@ func (s *Handler) ComposeEmail(c *gin.Context) {
 	})
 }
 
-func (s *Handler) SendBulkNewsletter(subject *string, prod models.Product) error {
+func (s *Handler) SendBulkNewsletter(c *gin.Context, subject *string, prod models.Product) error {
 	config, err := s.GetWebsiteSmtpConfig(nil) // Fetch your DB SMTP configs
 	if err != nil {
 		return err
@@ -121,13 +121,26 @@ func (s *Handler) SendBulkNewsletter(subject *string, prod models.Product) error
 	}
 
 	// RENDER BEAUTIFUL FASHION HTML THEME
+	settings, _ := s.db.GetWebsiteSettingByKey("store")
+	store := models.StoreConfig{}
+	json.Unmarshal([]byte(settings.Value), &store)
+	scheme := "https"
+	if c.Request.TLS == nil {
+		scheme = "http"
+	}
+	baseURL := scheme + "://" + c.Request.Host
 	htmlBody, err := templates.ParseHTMLTemplate(templates.TemplateProductNewsletter, templates.TemplateData{
-		StoreName:    "ELEGANCE",
+		StoreName: func() string {
+			if store.Name != "" {
+				return store.Name
+			}
+			return "ELEGANCE"
+		}(),
 		ProductName:  prod.Name,
 		ProductDesc:  *prod.Description,
 		ProductPrice: fmt.Sprintf("KSH %.2f", prod.Price), // format as currency
 		ProductImage: prod.Images[0],                      // Ensure absolute URL (e.g., https://...)
-		ActionURL:    "https://yourstore.com/products/" + prod.ID,
+		ActionURL:    baseURL + "/products/" + prod.ID,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to render product template: %w", err)
@@ -159,9 +172,17 @@ func (s *Handler) SendVerificationOTP(email string, token string) error {
 	}
 
 	// Generate gold-bordered security verification block
+	settings, _ := s.db.GetWebsiteSettingByKey("store")
+	store := models.StoreConfig{}
+	json.Unmarshal([]byte(settings.Value), &store)
 	htmlBody, err := templates.ParseHTMLTemplate(templates.TemplateVerificationOTP, templates.TemplateData{
-		StoreName: "ELEGANCE",
-		OTPCode:   token,
+		StoreName: func() string {
+			if store.Name != "" {
+				return store.Name
+			}
+			return "ELEGANCE"
+		}(),
+		OTPCode: token,
 	})
 	if err != nil {
 		return err
@@ -187,10 +208,23 @@ func (s *Handler) WelcomeNewsletterSubscription(c *gin.Context, toEmails []strin
 	}
 
 	// Render the luxury Welcome layout
+	settings, _ := s.db.GetWebsiteSettingByKey("store")
+	store := models.StoreConfig{}
+	json.Unmarshal([]byte(settings.Value), &store)
+	scheme := "https"
+	if c.Request.TLS == nil {
+		scheme = "http"
+	}
+	baseURL := scheme + "://" + c.Request.Host
 	htmlBody, err := templates.ParseHTMLTemplate(templates.TemplateWelcome, templates.TemplateData{
-		StoreName:  "ELEGANCE",
+		StoreName: func() string {
+			if store.Name != "" {
+				return store.Name
+			}
+			return "ELEGANCE"
+		}(),
 		ClientName: strings.Split(toEmails[0], "@")[0], // Fallback greeting name
-		ActionURL:  "https://elegance-store.com/new-arrivals",
+		ActionURL:  baseURL + "/new-arrivals",
 	})
 	if err != nil {
 		log.Printf("Failed to render welcome email: %v", err)
@@ -234,11 +268,20 @@ func (s *Handler) ConfirmUserOrder(c *gin.Context, orderID string) error {
 	}
 
 	// Generate the rich HTML markup payload
+	settings, _ := s.db.GetWebsiteSettingByKey("store")
+	store := models.StoreConfig{}
+	json.Unmarshal([]byte(settings.Value), &store)
 	htmlBody, err := templates.ParseHTMLTemplate(templates.TemplateOrderConfirmation, templates.TemplateData{
-		StoreName:       "ELEGANCE",
+		StoreName: func() string {
+			if store.Name != "" {
+				return fmt.Sprintf("%s", store.Name)
+			}
+			return "Elegance"
+		}(),
 		ClientName:      fmt.Sprintf("%s %s", user.FirstName, user.LastName),
 		OrderID:         order[0].ID,
 		OrderTotal:      fmt.Sprintf("KSH %.2f", order[0].Total),
+		OrderStatus:     order[0].Status,
 		OrderItems:      itemsForInvoice,
 		ShippingAddress: fmt.Sprintf("%s, %s, %s", order[0].Shipping.Address, order[0].Shipping.City, order[0].Shipping.PostalCode),
 	})
@@ -267,20 +310,32 @@ func (s *Handler) ConfirmUserOrder(c *gin.Context, orderID string) error {
 }
 
 // SendAccountUpdateNotice dispatches profile alteration notifications asynchronously
-func (s *Handler) SendAccountUpdateNotice(email string, clientName string, ipAddress *string, userAgent *string) {
+func (s *Handler) SendAccountUpdateNotice(c *gin.Context, email string, clientName string, ipAddress *string, userAgent *string) {
 	go func() {
-		config, err := s.GetWebsiteSmtpConfig(nil)
+		config, err := s.GetWebsiteSmtpConfig(c)
 		if err != nil {
 			log.Printf("SendAccountUpdateNotice error retrieving smtp parameters: %v", err)
 			return
 		}
-
+		settings, _ := s.db.GetWebsiteSettingByKey("store")
+		store := models.StoreConfig{}
+		json.Unmarshal([]byte(settings.Value), &store)
+		scheme := "https"
+		if c.Request.TLS == nil {
+			scheme = "http"
+		}
+		baseURL := scheme + "://" + c.Request.Host
 		htmlBody, err := templates.ParseHTMLTemplate(templates.TemplateAccountUpdate, templates.TemplateData{
-			StoreName:   "ELEGANCE",
+			StoreName: func() string {
+				if store.Name != "" {
+					return fmt.Sprintf("%s", store.Name)
+				}
+				return "ELEGANCE"
+			}(),
 			ClientName:  clientName,
 			IPAddress:   *ipAddress,
 			BrowserInfo: *userAgent,
-			ActionURL:   "https://elegance-store.com/account/settings",
+			ActionURL:   baseURL + "/account",
 		})
 		if err != nil {
 			log.Printf("Failed to render account update template: %v", err)
@@ -308,9 +363,16 @@ func (s *Handler) SendAccountDeletionNotice(email, clientName string) {
 			log.Printf("SendAccountDeletionNotice error retrieving smtp parameters: %v", err)
 			return
 		}
-
+		settings, _ := s.db.GetWebsiteSettingByKey("store")
+		store := models.StoreConfig{}
+		json.Unmarshal([]byte(settings.Value), &store)
 		htmlBody, err := templates.ParseHTMLTemplate(templates.TemplateAccountDeletion, templates.TemplateData{
-			StoreName:  "ELEGANCE",
+			StoreName: func() string {
+				if store.Name != "" {
+					return fmt.Sprintf("%s", store.Name)
+				}
+				return "ELEGANCE"
+			}(),
 			ClientName: clientName,
 		})
 		if err != nil {
@@ -332,19 +394,31 @@ func (s *Handler) SendAccountDeletionNotice(email, clientName string) {
 }
 
 // SendChangePasswordNotice dispatches credential safety receipts asynchronously
-func (s *Handler) SendChangePasswordNotice(email, clientName, ipAddress string) {
+func (s *Handler) SendChangePasswordNotice(c *gin.Context, email, clientName, ipAddress string) {
 	go func() {
 		config, err := s.GetWebsiteSmtpConfig(nil)
 		if err != nil {
 			log.Printf("SendChangePasswordNotice error retrieving smtp parameters: %v", err)
 			return
 		}
-
+		settings, _ := s.db.GetWebsiteSettingByKey("store")
+		store := models.StoreConfig{}
+		json.Unmarshal([]byte(settings.Value), &store)
+		scheme := "https"
+		if c.Request.TLS == nil {
+			scheme = "http"
+		}
+		baseURL := scheme + "://" + c.Request.Host
 		htmlBody, err := templates.ParseHTMLTemplate(templates.TemplateChangePassword, templates.TemplateData{
-			StoreName:  "ELEGANCE",
+			StoreName: func() string {
+				if store.Name != "" {
+					return store.Name
+				}
+				return "ELEGANCE"
+			}(),
 			ClientName: clientName,
 			IPAddress:  ipAddress,
-			ActionURL:  "https://elegance-store.com/account/security-freeze",
+			ActionURL:  baseURL + "/account",
 		})
 		if err != nil {
 			log.Printf("Failed to render change password template: %v", err)
@@ -365,7 +439,7 @@ func (s *Handler) SendChangePasswordNotice(email, clientName, ipAddress string) 
 }
 
 // SendSupportHelpConfirmation dispatches conversational queues confirmations asynchronously
-func (s *Handler) SendSupportHelpConfirmation(email, clientName, ticketID, subject, customMessage string) {
+func (s *Handler) SendSupportHelpConfirmation(c *gin.Context, email, clientName, ticketID, subject, customMessage string) {
 	go func() {
 		config, err := s.GetWebsiteSmtpConfig(nil)
 		if err != nil {
@@ -373,13 +447,26 @@ func (s *Handler) SendSupportHelpConfirmation(email, clientName, ticketID, subje
 			return
 		}
 
+		settings, _ := s.db.GetWebsiteSettingByKey("store")
+		store := models.StoreConfig{}
+		json.Unmarshal([]byte(settings.Value), &store)
+		scheme := "https"
+		if c.Request.TLS == nil {
+			scheme = "http"
+		}
+		baseURL := scheme + "://" + c.Request.Host
 		htmlBody, err := templates.ParseHTMLTemplate(templates.TemplateSupportHelp, templates.TemplateData{
-			StoreName:       "ELEGANCE",
+			StoreName: func() string {
+				if store.Name != "" {
+					return fmt.Sprintf("%s", store.Name)
+				}
+				return "ELEGANCE"
+			}(),
 			ClientName:      clientName,
 			SupportTicketID: ticketID,
 			SupportSubject:  subject,
 			SupportMessage:  customMessage,
-			ActionURL:       "https://elegance-store.com/support/tickets/" + ticketID,
+			ActionURL:       baseURL + "/support/tickets/" + ticketID,
 		})
 		if err != nil {
 			log.Printf("Failed to render support confirmation template: %v", err)

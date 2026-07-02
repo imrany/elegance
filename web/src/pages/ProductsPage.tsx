@@ -3,7 +3,7 @@ import { useProducts } from "@/hooks/useProducts";
 import { Layout } from "@/components/layout/Layout";
 import { ProductCard } from "@/components/products/ProductCard";
 
-export const ProductListingPage = () => {
+export const ProductsPage = () => {
   const { data: products, isLoading } = useProducts();
 
   if (!products) {

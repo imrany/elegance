@@ -170,6 +170,7 @@ export interface User {
   last_name: string;
   phone_number: string;
   role: string;
+  is_initial_admin: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -634,22 +635,17 @@ class ApiClient {
     });
   }
 
-  async getSubscriptions(): Promise<EmailSubscription[]> {
-    const res = await fetch(`${API_URL}/api/admin/email/subscriptions`);
-    if (!res.ok) throw new Error("Could not fetch subscriptions list");
-    const json = await res.json();
-    return json.data;
+  async getEmailSubscriptions() {
+    return this.request<EmailSubscription[]>(`/api/admin/email/subscriptions`);
   }
 
   async unsubscribeEmail(email: string): Promise<void> {
-    const res = await fetch(
-      `${API_URL}/api/email/unsubscribe/${encodeURIComponent(email)}`,
+    return this.request<void>(
+      `/api/admin/email/unsubscribe/${encodeURIComponent(email)}`,
       {
         method: "DELETE",
       },
     );
-    if (!res.ok)
-      throw new Error("Failed to delete backend subscription record");
   }
 
   async composeEmail(data: EmailPayload) {
@@ -686,7 +682,7 @@ class ApiClient {
   }
 
   async sendWebPushNotification(data: {
-    endpoints: string[];
+    endpoints?: string[];
     payload: NotificationPayload;
   }) {
     return this.request<void>(`/api/admin/webpush/send`, {

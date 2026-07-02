@@ -75,15 +75,16 @@ func (h *Handler) SignUp(c *gin.Context) {
 
 	// Create user
 	userRequest := models.User{
-		FirstName:   req.FirstName,
-		LastName:    req.LastName,
-		PhoneNumber: req.PhoneNumber,
-		ID:          uuid.New().String(),
-		Email:       req.Email,
-		Role:        "user",
-		Password:    string(hashedPassword),
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		FirstName:      req.FirstName,
+		LastName:       req.LastName,
+		PhoneNumber:    req.PhoneNumber,
+		ID:             uuid.New().String(),
+		Email:          req.Email,
+		Role:           "user",
+		IsInitialAdmin: false,
+		Password:       string(hashedPassword),
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
 	}
 	user, err := h.db.CreateUser(&userRequest)
 	if err != nil {
@@ -103,16 +104,8 @@ func (h *Handler) SignUp(c *gin.Context) {
 		return
 	}
 
-	// Automatically subscribe user email to newsletter registry
-	cleanEmail := strings.ToLower(strings.TrimSpace(user.Email))
-
 	// Persist subscription log (ignoring unique constraint failures if already present)
-	_ = h.db.CreateEmailSubscription(&models.EmailSubscription{
-		Email: cleanEmail,
-	})
-
-	// Send gorgeous luxury welcome catalog template email asynchronously
-	h.WelcomeNewsletterSubscription(c, []string{cleanEmail})
+	h.Subscribe(c, req.Email)
 
 	utils.SendResponse(c, utils.Response{
 		Status:  http.StatusCreated,

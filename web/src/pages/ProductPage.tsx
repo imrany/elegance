@@ -129,7 +129,7 @@ export default function ProductPage() {
   return (
     <Layout>
       {/* Breadcrumbs Section */}
-      {/*<div className="container py-4 border-b border-border/40">
+      <div className="container py-4 border-b border-border/40">
         <nav className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
           <Link to="/" className="hover:text-foreground transition-colors">
             Home
@@ -146,7 +146,7 @@ export default function ProductPage() {
             {product.name}
           </span>
         </nav>
-      </div>*/}
+      </div>
 
       <div className="container py-12">
         <div className="grid gap-12 lg:grid-cols-2">

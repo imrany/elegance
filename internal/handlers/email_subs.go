@@ -67,14 +67,16 @@ func (h *Handler) GetEmailSubscriptions(c *gin.Context) {
 	if err != nil {
 		utils.SendResponse(c, utils.Response{
 			Status:  http.StatusInternalServerError,
+			Success: false,
 			Message: "Failed to fetch email subscriptions",
 		})
 		return
 	}
 
 	utils.SendResponse(c, utils.Response{
-		Status: http.StatusOK,
-		Data:   subs,
+		Status:  http.StatusOK,
+		Success: true,
+		Data:    subs,
 	})
 }
 
@@ -84,6 +86,7 @@ func (h *Handler) GetEmailSubscription(c *gin.Context) {
 	if email == "" {
 		utils.SendResponse(c, utils.Response{
 			Status:  http.StatusBadRequest,
+			Success: false,
 			Message: "Email parameter is required",
 		})
 		return
@@ -95,6 +98,7 @@ func (h *Handler) GetEmailSubscription(c *gin.Context) {
 		if strings.Contains(err.Error(), "not found") {
 			utils.SendResponse(c, utils.Response{
 				Status:  http.StatusNotFound,
+				Success: false,
 				Message: "No active subscription found for that email address",
 			})
 			return
@@ -102,14 +106,16 @@ func (h *Handler) GetEmailSubscription(c *gin.Context) {
 
 		utils.SendResponse(c, utils.Response{
 			Status:  http.StatusInternalServerError,
+			Success: false,
 			Message: "Error looking up subscription profile",
 		})
 		return
 	}
 
 	utils.SendResponse(c, utils.Response{
-		Status: http.StatusOK,
-		Data:   subs,
+		Status:  http.StatusOK,
+		Success: true,
+		Data:    subs,
 	})
 }
 
@@ -119,6 +125,7 @@ func (h *Handler) UnsubscribeEmail(c *gin.Context) {
 	if email == "" {
 		utils.SendResponse(c, utils.Response{
 			Status:  http.StatusBadRequest,
+			Success: false,
 			Message: "Target email address is missing",
 		})
 		return
@@ -127,6 +134,7 @@ func (h *Handler) UnsubscribeEmail(c *gin.Context) {
 	if err := h.db.DeleteEmailSubscription(strings.ToLower(email)); err != nil {
 		utils.SendResponse(c, utils.Response{
 			Status:  http.StatusInternalServerError,
+			Success: false,
 			Message: "Failed to process cancellation request",
 		})
 		return
@@ -134,6 +142,7 @@ func (h *Handler) UnsubscribeEmail(c *gin.Context) {
 
 	utils.SendResponse(c, utils.Response{
 		Status:  http.StatusOK,
+		Success: true,
 		Message: "Unsubscribed successfully",
 	})
 }

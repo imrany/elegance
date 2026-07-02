@@ -4,7 +4,7 @@ import { ProductCard } from "@/components/products/ProductCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCategories } from "@/hooks/useCategories";
 import { useProducts } from "@/hooks/useProducts";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 export default function CategoryPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -21,17 +21,15 @@ export default function CategoryPage() {
   };
   const { data: products, isLoading } = useProducts(queryParams);
 
+  const scrollRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
-    scrollTo({
-      top: 0,
-      left: 0,
-      behavior: "smooth",
-    });
-  }, []);
+    scrollRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [category]);
   return (
     <Layout>
       {/* Hero */}
       <section className="relative bg-secondary py-24">
+        <div ref={scrollRef}></div>
         <div className="container">
           <div className="mx-auto max-w-2xl text-center">
             <p className="text-sm font-medium tracking-luxury uppercase text-accent">

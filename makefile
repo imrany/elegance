@@ -8,7 +8,7 @@ BINARY_NAME=elegance
 CMD_PATH=./cmd/server
 BUILD_DIR=./bin
 GO=go
-GOFLAGS=-v
+GOFLAGS=-v -ldflags "-X main.Version=$(git describe --tags --always)"
 
 ## help: Display this help message
 help:

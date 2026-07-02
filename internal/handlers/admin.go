@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"log/slog"
 	"math/rand"
 	"mime/multipart"
 	"net/http"
@@ -25,13 +26,13 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// Handler handles admin-specific operations
+// AdminHandler handles admin-specific operations
 type AdminHandler struct {
 	db        database.DB
 	jwtSecret string
 }
 
-// NewHandler creates a new admin handler
+// NewAdminHandler creates a new admin handler
 func NewAdminHandler(db database.DB, jwtSecret string) *AdminHandler {
 	return &AdminHandler{db: db, jwtSecret: jwtSecret}
 }
@@ -99,7 +100,18 @@ func (h *Handler) CreateProduct(c *gin.Context) {
 	}
 
 	// product created emails to subscribers asynchronously to avoid blocking the API response
-	h.SendBulkNewsletter(nil, product)
+	settings, _ := h.db.GetWebsiteSettingByKey("store")
+	store := models.StoreConfig{}
+	json.Unmarshal([]byte(settings.Value), &store)
+	h.SendBulkNewsletter(c, nil, product)
+	h.SendPush(NotificationPayload{
+		Title:              "🔔 New a product has been added",
+		Icon:               fmt.Sprintf("%s", store.Logo),
+		Image:              product.Images[0],
+		Body:               fmt.Sprintf("%s was added to our catalog, click to view", product.Name),
+		Data:               map[string]any{"url": fmt.Sprintf("/products/%s", product.ID)},
+		RequireInteraction: false,
+	}, nil)
 
 	utils.SendResponse(c, utils.Response{
 		Status:  http.StatusCreated,
@@ -132,6 +144,20 @@ func (h *Handler) UpdateProduct(c *gin.Context) {
 		})
 		return
 	}
+
+	settings, _ := h.db.GetWebsiteSettingByKey("store")
+	store := models.StoreConfig{}
+	json.Unmarshal([]byte(settings.Value), &store)
+	subject := fmt.Sprintf("%s has been updated", product.Name)
+	h.SendBulkNewsletter(c, &subject, product)
+	h.SendPush(NotificationPayload{
+		Title:              "🔔 Product Update",
+		Icon:               fmt.Sprintf("%s", store.Logo),
+		Image:              product.Images[0],
+		Body:               fmt.Sprintf("%s was updated to our catalog, click to view", product.Name),
+		Data:               map[string]any{"url": fmt.Sprintf("/products/%s", product.ID)},
+		RequireInteraction: false,
+	}, nil)
 
 	utils.SendResponse(c, utils.Response{
 		Status:  http.StatusOK,
@@ -196,7 +222,8 @@ func (h *Handler) UpdateOrderStatus(c *gin.Context) {
 		})
 		return
 	}
-
+	// send confirm order email to affected user
+	h.ConfirmUserOrder(c, id)
 	utils.SendResponse(c, utils.Response{
 		Status:  http.StatusOK,
 		Success: true,
@@ -274,7 +301,8 @@ func (h *Handler) UpdateUserRole(c *gin.Context) {
 		return
 	}
 
-	h.SendAccountUpdateNotice(user.Email, user.FirstName, nil, nil)
+	userAgent := c.Request.UserAgent()
+	h.SendAccountUpdateNotice(c, user.Email, user.FirstName, &c.Request.RemoteAddr, &userAgent)
 	utils.SendResponse(c, utils.Response{
 		Status:  http.StatusOK,
 		Success: true,
@@ -309,6 +337,10 @@ func (h *Handler) DeleteUser(c *gin.Context) {
 		return
 	}
 
+	if err := h.db.DeleteEmailSubscription(user.Email); err != nil {
+		slog.Error("Failed to delete email sub", "email", user.Email, "error", err.Error())
+	}
+
 	// Delete the user
 	if err := h.db.DeleteUser(user.ID); err != nil {
 		utils.SendResponse(c, utils.Response{
@@ -318,6 +350,7 @@ func (h *Handler) DeleteUser(c *gin.Context) {
 		})
 		return
 	}
+
 	h.SendAccountDeletionNotice(user.Email, user.FirstName)
 	utils.SendResponse(c, utils.Response{
 		Status:  http.StatusOK,
@@ -396,15 +429,16 @@ func (h *Handler) CreateInitialAdmin(c *gin.Context) {
 	}
 
 	userRequest := models.User{
-		FirstName:   req.FirstName,
-		LastName:    req.LastName,
-		PhoneNumber: req.PhoneNumber,
-		ID:          uuid.New().String(),
-		Email:       req.Email,
-		Role:        "admin",
-		Password:    string(hashedPassword),
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		FirstName:      req.FirstName,
+		LastName:       req.LastName,
+		PhoneNumber:    req.PhoneNumber,
+		ID:             uuid.New().String(),
+		Email:          req.Email,
+		Role:           "admin",
+		Password:       string(hashedPassword),
+		IsInitialAdmin: true,
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
 	}
 	admin, err := h.db.CreateUser(&userRequest)
 	if err != nil {
@@ -442,6 +476,8 @@ func (h *Handler) CreateInitialAdmin(c *gin.Context) {
 		})
 		return
 	}
+
+	h.Subscribe(c, req.Email)
 	utils.SendResponse(c, utils.Response{
 		Status:  http.StatusCreated,
 		Success: true,
@@ -883,8 +919,7 @@ func (h *Handler) UpdateWebsiteSetting(c *gin.Context) {
 
 	log.Println("UpdateWebsiteSetting:", key, req.Value)
 
-	// --- Centralized Image Cleanup Logic (Helper Function needed in your codebase) ---
-	// Define a helper function structure to clean up the logic
+	// --- Centralized Image Cleanup Logic ---
 	cleanupImage := func(currentValue string, newValue string, jsonField string) {
 		var current map[string]any
 		var new map[string]any
@@ -898,7 +933,6 @@ func (h *Handler) UpdateWebsiteSetting(c *gin.Context) {
 			return
 		}
 
-		// We must type assert the values now that they are interfaces
 		oldImagePath, oldOk := current[jsonField].(string)
 		newImagePath, newOk := new[jsonField].(string)
 
@@ -924,8 +958,6 @@ func (h *Handler) UpdateWebsiteSetting(c *gin.Context) {
 		}
 
 		var smtpConfig mailer.SmtpConfig
-		// Assuming the 'new' map contains the fields for SmtpConfig
-		// We need to marshal it back to JSON and then unmarshal into the struct
 		newJSON, err := json.Marshal(new)
 		if err != nil {
 			log.Printf("Failed to marshal new config for SMTP test: %v", err)
@@ -939,26 +971,20 @@ func (h *Handler) UpdateWebsiteSetting(c *gin.Context) {
 		_, err = mailer.TestConnection(&smtpConfig)
 		if err != nil {
 			log.Printf("Failed to test SMTP configuration: %v", err)
-			// Return an error to the caller so they can send an appropriate response
 			return fmt.Errorf("failed to test SMTP configuration: %w", err)
 		}
 
-		// If the connection test is successful, update "is_configured" to true
 		new["is_configured"] = true
 
-		// Re-marshal the 'new' map to update req.Value with the new 'is_configured' status
 		updatedNewValue, err := json.Marshal(new)
 		if err != nil {
 			log.Printf("Failed to re-marshal updated SMTP config: %v", err)
 			return fmt.Errorf("failed to re-marshal updated SMTP config: %w", err)
 		}
-		req.Value = string(updatedNewValue) // Update req.Value with the modified JSON string
+		req.Value = string(updatedNewValue)
 		return nil
 	}
-	// --- End Helper Function ---
 
-	// Check if the current setting has an image we need to potentially delete
-	// We only need to fetch the existing setting once, before we update it in the database.
 	setting, err := h.db.GetWebsiteSettingByKey(key)
 	if err == nil && setting.Value != "" {
 		currentValue := strings.TrimSpace(setting.Value)
@@ -980,7 +1006,6 @@ func (h *Handler) UpdateWebsiteSetting(c *gin.Context) {
 		case "about":
 			cleanupImage(currentValue, req.Value, "image")
 		case "seo":
-			// SEO handles multiple images, needs slight modification to the generic helper
 			var oldSEO struct {
 				OgImage string `json:"og_image"`
 				Favicon string `json:"favicon"`
@@ -991,13 +1016,11 @@ func (h *Handler) UpdateWebsiteSetting(c *gin.Context) {
 			}
 
 			if json.Unmarshal([]byte(currentValue), &oldSEO) == nil && json.Unmarshal([]byte(req.Value), &newSEO) == nil {
-				// Check and delete OgImage
 				if oldSEO.OgImage != "" && oldSEO.OgImage != newSEO.OgImage {
 					if err := DeleteFile(userIDStr, filepath.Base(oldSEO.OgImage)); err != nil {
 						log.Printf("Failed to delete old og_image file: %v", err)
 					}
 				}
-				// Check and delete Favicon
 				if oldSEO.Favicon != "" && oldSEO.Favicon != newSEO.Favicon {
 					if err := DeleteFile(userIDStr, filepath.Base(oldSEO.Favicon)); err != nil {
 						log.Printf("Failed to delete old favicon file: %v", err)
@@ -1005,11 +1028,10 @@ func (h *Handler) UpdateWebsiteSetting(c *gin.Context) {
 				}
 			}
 		}
-	} else if err != nil && err != sql.ErrNoRows { // Check if the error was something other than 'not found'
+	} else if err != nil && err != sql.ErrNoRows {
 		log.Printf("Error fetching existing setting for key %s: %v", key, err)
 	}
 
-	// Update the database with the new value
 	if err := h.db.UpdateWebsiteSetting(key, req.Value); err != nil {
 		utils.SendResponse(c, utils.Response{
 			Status:  http.StatusInternalServerError,
@@ -1019,7 +1041,6 @@ func (h *Handler) UpdateWebsiteSetting(c *gin.Context) {
 		return
 	}
 
-	// Fetch the updated setting
 	config, err := h.db.GetWebsiteSettingByKey(key)
 	if err != nil {
 		utils.SendResponse(c, utils.Response{

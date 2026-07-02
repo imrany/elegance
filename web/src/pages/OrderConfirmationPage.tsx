@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Layout } from "@/components/layout/Layout";
@@ -52,8 +52,9 @@ export default function OrderConfirmationPage() {
   });
 
   // Scroll to top on mount
+  const scrollRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    scrollRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
   }, []);
 
   // Countdown for M-Pesa prompt
@@ -141,6 +142,7 @@ export default function OrderConfirmationPage() {
     return (
       <Layout>
         <div className="container py-12">
+          <div ref={scrollRef}></div>
           <Card className="mx-auto max-w-md">
             <CardHeader>
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
