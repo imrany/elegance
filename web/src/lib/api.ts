@@ -18,18 +18,6 @@ export interface ApiError {
   error?: string; // Compatibility with your toast.error(error.error) logic
 }
 
-export type EventType =
-  "new_application" | "new_subscriber" | "new_message" | string;
-export interface Notification {
-  user_id: string;
-  title: string;
-  body: string;
-  created_at: string;
-  updated_at: string;
-  event_type: EventType;
-  is_read: boolean;
-}
-
 export interface HeroType {
   background_image: string;
   cta_link: string;
@@ -38,6 +26,19 @@ export interface HeroType {
   overlay_opacity: number;
   subtitle: string;
   title: string;
+}
+
+export interface NotificationPayload {
+  title: string;
+  body: string;
+  icon?: string;
+  badge?: string;
+  image?: string;
+  data: {
+    url: "/ " | string;
+  };
+  tag?: "default-tag" | string;
+  require_interaction: boolean;
 }
 
 export interface EmailPayload {
@@ -672,7 +673,7 @@ class ApiClient {
   }
 
   async getSubscriptions(): Promise<EmailSubscription[]> {
-    const res = await fetch(`${API_URL}/api/email/subscriptions`);
+    const res = await fetch(`${API_URL}/api/admin/email/subscriptions`);
     if (!res.ok) throw new Error("Could not fetch subscriptions list");
     const json = await res.json();
     return json.data;
@@ -696,35 +697,15 @@ class ApiClient {
     });
   }
 
-  // notifications
-  async listNotifications() {
-    return this.request<Notification[]>(`/api/notifications/list`);
-  }
-  async unreadNotifications(userid: string) {
-    return this.request<number>(`/api/notifications/${userid}`);
-  }
-  async markAsReadNotifications(id?: string) {
-    return this.request<void>(`/api/notifications/mark-as-read/${id}`);
-  }
-  async deleteNotification(id: string) {
-    return this.request<void>(`/api/notifications/${id}`, {
-      method: "POST",
-    });
-  }
-
   // push notifications
   async unsubscribeWebPush(data: { endpoint: string }) {
-    return this.request<void>(`/api/webpush/unsubscribe`, {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
+    return this.request<void>(`/api/webpush/unsubscribe/${data.endpoint}`);
   }
 
   async subscribeWebPush(data: {
-    user_id: string;
     endpoint: string;
     p256dh: string;
-    auth_key: string;
+    auth: string;
     user_agent: string;
   }) {
     return this.request<void>(`/api/webpush/subscribe`, {
@@ -733,6 +714,25 @@ class ApiClient {
     });
   }
 
+  async verifyWebPushSubscription(data: { endpoint: string }) {
+    return this.request<void>(`/api/webpush/verify/${data.endpoint}`);
+  }
+
+  async sendWebPushNotification(data: {
+    endpoints: string[];
+    payload: NotificationPayload;
+  }) {
+    return this.request<void>(`/api/admin/webpush/send`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getWebPushSubscription(data: { endpoint: string }) {
+    return this.request<void>(
+      `/api/admin/webpush/subscriptions/${data.endpoint}`,
+    );
+  }
   // Website Builder
   async getAllWebsiteConfig() {
     const url = `/api/website-builder`;

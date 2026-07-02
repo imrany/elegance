@@ -163,7 +163,6 @@ func (s *Server) setupRoutes() {
 		email := api.Group("/email")
 		{
 			email.POST("/subscribe", s.handler.SubscribeEmail)
-			email.GET("/subscriptions", s.handler.GetEmailSubscriptions)
 			email.GET("/subscriptions/:email", s.handler.GetEmailSubscription)
 			email.DELETE("/unsubscribe/:email", s.handler.UnsubscribeEmail)
 			email.GET("/unsubscribe/:email", s.handler.UnsubscribeEmail)
@@ -178,6 +177,13 @@ func (s *Server) setupRoutes() {
 			products.GET("/:slug", s.handler.GetProductBySlug)
 		}
 
+		// webpush (public)
+		webpush := api.Group("/webpush")
+		{
+			webpush.POST("/subscribe", s.handler.SubscribeToPushNotification)
+			webpush.GET("/unsubscribe/:endpoint", s.handler.UnsubscribeToPushNotification)
+			webpush.GET("/verify/:endpoint", s.handler.VerifySubscription)
+		}
 		// Protected routes (require authentication)
 		authenticated := api.Group("")
 		authenticated.Use(middleware.AuthMiddleware(s.config.JWTSecret))
@@ -197,6 +203,22 @@ func (s *Server) setupRoutes() {
 		admin := api.Group("/admin")
 		admin.Use(middleware.AuthMiddleware(s.config.JWTSecret), middleware.AdminOnly())
 		{
+
+			email := admin.Group("/email")
+			{
+				email.GET("/subscriptions", s.handler.GetEmailSubscriptions)
+			}
+
+			smtp := admin.Group("/smtp")
+			{
+				smtp.GET("/test", s.handler.TestSmtpConnection)
+				smtp.POST("/compose", s.handler.ComposeEmail)
+			}
+			webpush := admin.Group("/webpush")
+			{
+				webpush.POST("/send", s.handler.SendPushNotification)
+				webpush.GET("/subscriptions/:endpoint", s.handler.GetSubscription)
+			}
 
 			// User management
 			admin.GET("/users", s.handler.GetAllUsers)
@@ -236,10 +258,6 @@ func (s *Server) setupRoutes() {
 			admin.POST("/pages/:id/unpublish", s.handler.UnpublishPage)
 			admin.POST("/pages/:id/duplicate", s.handler.DuplicatePage)
 			admin.POST("/pages/:id/reorder-sections", s.handler.ReorderPageSections)
-
-			// SMTP management
-			admin.POST("/smtp/compose", s.handler.ComposeEmail)
-			admin.GET("/smtp/test", s.handler.TestSmtpConnection)
 		}
 	}
 
@@ -499,9 +517,10 @@ func (s *Server) handleRoot(c *gin.Context) {
 func (s *Server) Start() error {
 	addr := fmt.Sprintf("%s:%d", s.config.Server.Host, s.config.Server.Port)
 	log.Printf("🚀 Server starting on %s", addr)
-	log.Printf("📊 Health check: http://%s/api/health", addr)
-	log.Printf("🔌 API endpoint: http://%s/api", addr)
-	log.Printf("🗺️  Sitemap: http://%s/sitemap.xml", addr)
-	log.Printf("🤖 Robots: http://%s/robots.txt", addr)
+	log.Printf(" Health check: http://%s/api/health", addr)
+	log.Printf(" API endpoint: http://%s/api", addr)
+	log.Printf(" Sitemap: http://%s/sitemap.xml", addr)
+	log.Printf(" Robots: http://%s/robots.txt", addr)
+	log.Printf(" Manifest: http://%s/manifest.json", addr)
 	return s.router.Run(addr)
 }

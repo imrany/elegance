@@ -4,18 +4,7 @@ import (
 	"time"
 )
 
-type Notification struct {
-	UserID    string    `json:"user_id" db:"user_id"`
-	Title     string    `json:"title" db:"title"`
-	Body      string    `json:"body" db:"body"`
-	EventType string    `json:"event_type" db:"event_type"`
-	IsRead    bool      `json:"is_read" db:"is_read"`
-	CreatedAt time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
-}
-
 type PushSubscription struct {
-	UserID    string    `json:"user_id"`
 	Endpoint  string    `json:"endpoint"`
 	P256dhKey string    `json:"p256dh_key"`
 	AuthKey   string    `json:"auth_key"`
@@ -25,14 +14,11 @@ type PushSubscription struct {
 }
 
 // SubscriptionRequest from frontend
-type Keys struct {
-	P256dh string `json:"p256dh" db:"p256dh"`
-	Auth   string `json:"auth" db:"auth"`
-}
-
 type WebPushSubscription struct {
-	Endpoint string `json:"endpoint" db:"endpoint"`
-	Keys     Keys   `json:"keys" db:"keys"`
+	Endpoint  string `json:"endpoint" db:"endpoint"`
+	P256dh    string `json:"p256dh" db:"p256dh"`
+	Auth      string `json:"auth" db:"auth"`
+	UserAgent string `json:"user_agent" db:"user_agent"`
 }
 
 // User represents a user

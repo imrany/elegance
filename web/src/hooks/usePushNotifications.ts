@@ -1,26 +1,30 @@
+import { fireFireworks } from "@/components/Confetti";
 import { api } from "@/lib";
 import { urlBase64ToUint8Array } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
 
 const VAPID_PUBLIC_KEY =
   import.meta.env.VAPID_PUBLIC_KEY ||
-  "BPbYWrHTioEjXF5ZUDyI-K1Pf7f0ZNWj7oSH5-C5MzTZk7RtbbIXdDp1cudLtoCiD62a32F-b-n4Lzmhs5F8BsA";
+  "BMsDdmehAo9cbq_ruyR0G53nEGqvD6XZlh-FWbBHNod672yP74LtWK_DRzmBXK2azLgyNmOg8_2s0dNk32cZxKI";
 
 export function usePushNotifications() {
-  // Global singleton tracking states so multiple components can share the same pipeline
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [permissionStatus, setPermissionStatus] =
     useState<NotificationPermission>("default");
-  const isSupported = useState(
+
+  // FIXED: Evaluated as a clean boolean variable rather than an array state container
+  const isSupported =
     typeof window !== "undefined" &&
-      "Notification" in window &&
-      "serviceWorker" in navigator &&
-      "PushManager" in window,
-  );
+    "Notification" in window &&
+    "serviceWorker" in navigator &&
+    "PushManager" in window;
 
   // Checks the active client state dynamically to ensure accuracy on browser reload
-  async function checkSubscriptionStatus() {
+  const checkSubscriptionStatus = useCallback(async () => {
     if (!isSupported) return;
+    setIsLoading(true);
     try {
       const registration = await navigator.serviceWorker.getRegistration();
       if (!registration) {
@@ -29,17 +33,31 @@ export function usePushNotifications() {
       }
       const subscription = await registration.pushManager.getSubscription();
       setIsSubscribed(!!subscription);
+      if (typeof window !== "undefined" && "Notification" in window) {
+        setPermissionStatus(Notification.permission);
+      }
     } catch {
       setIsSubscribed(false);
+    } finally {
+      setIsLoading(false);
     }
-  }
+  }, [isSupported]);
+
+  // Sync state cleanly on client initialization mount
+  useEffect(() => {
+    checkSubscriptionStatus();
+  }, [checkSubscriptionStatus]);
 
   async function registerServiceWorker() {
     if (!isSupported) return null;
     try {
-      const registration = await navigator.serviceWorker.register("/sw.js", {
-        scope: "/",
-      });
+      const registration =
+        (await navigator.serviceWorker.getRegistration()) ||
+        (await navigator.serviceWorker.register("/sw.js", {
+          scope: "/",
+        }));
+
+      await navigator.serviceWorker.ready;
       return registration;
     } catch (err) {
       console.error("❌ Service Worker Registration Failed:", err);
@@ -47,56 +65,83 @@ export function usePushNotifications() {
     }
   }
 
-  async function subscribe(userId: string) {
+  async function subscribe() {
+    setIsLoading(true);
     if (!isSupported || !VAPID_PUBLIC_KEY) {
       console.warn("⚠️ Push not supported or missing VAPID key");
+      setIsLoading(false);
       return false;
     }
 
     console.log("Asking for notification permissions...");
     const permission = await Notification.requestPermission();
     console.log("Permission status:", permission);
+    setPermissionStatus(permission);
+
     if (permission !== "granted") {
-      setPermissionStatus(permission);
+      setIsLoading(false);
       return false;
     }
 
     const registration = await registerServiceWorker();
     if (!registration) {
       console.warn("⚠️ No service worker registration found.");
+      setIsLoading(false);
       return false;
     }
 
     try {
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-      });
+      let subscription = await registration.pushManager.getSubscription();
+      if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        });
+      }
 
       const subJson = subscription.toJSON();
 
+      console.log(subJson, subscription);
       await api.subscribeWebPush({
-        user_id: userId,
         endpoint: subscription.endpoint,
         p256dh: subJson.keys?.p256dh,
-        auth_key: subJson.keys?.auth,
+        auth: subJson.keys?.auth,
         user_agent: navigator.userAgent,
       });
 
       setIsSubscribed(true);
+      setIsLoading(false);
+      fireFireworks();
+
+      await api.sendWebPushNotification({
+        endpoints: [subscription.endpoint],
+        payload: {
+          title: "🔔 Thanks for subscribing to Elegance",
+          body: "Welcome",
+          data: { url: "/" },
+          require_interaction: false,
+        },
+      });
       return true;
-    } catch (err) {
-      console.error("❌ PushManager Subscription Failed:", err); // <-- Add this
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (err: any) {
+      setIsLoading(false);
+      console.error("❌ PushManager Subscription Failed:", err);
+      toast.error(err.message || "Subscription failed");
       return false;
     }
   }
 
   async function unsubscribe() {
     if (!isSupported) return false;
+    setIsLoading(true);
 
     try {
       const registration = await navigator.serviceWorker.getRegistration();
-      if (!registration) return false;
+      if (!registration) {
+        setIsLoading(false);
+        return false;
+      }
 
       const subscription = await registration.pushManager.getSubscription();
       if (subscription) {
@@ -105,8 +150,10 @@ export function usePushNotifications() {
       }
 
       setIsSubscribed(false);
+      setIsLoading(false);
       return true;
     } catch {
+      setIsLoading(false);
       return false;
     }
   }
@@ -114,7 +161,9 @@ export function usePushNotifications() {
   function setPermissionStatusFunc(value: NotificationPermission) {
     setPermissionStatus(value);
   }
+
   return {
+    isLoading,
     isSupported,
     isSubscribed,
     subscribe,

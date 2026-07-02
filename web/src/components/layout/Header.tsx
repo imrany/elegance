@@ -12,13 +12,9 @@ import {
   Bell,
   BellRing,
   BellOff,
-  CheckCheck,
-  Briefcase,
-  MailOpen,
-  Mail,
-  FileText,
-  Trash2,
   Info,
+  LoaderCircle,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -36,13 +32,12 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOrder } from "@/contexts/OrderContext";
 import { useGeneralContext } from "@/contexts/GeneralContext";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
-import { api, EventType, formatTime, Notification } from "@/lib";
 
 export function Header() {
   const [isOpen, setIsOpen] = useState(false);
@@ -66,114 +61,14 @@ export function Header() {
   ];
 
   const {
+    isLoading,
     isSubscribed,
     subscribe,
     isSupported,
-    checkSubscriptionStatus,
     permissionStatus,
     setPermissionStatus,
+    unsubscribe,
   } = usePushNotifications();
-
-  // --- Fixed Vue refs converted to React state ---
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  async function fetchNotifications() {
-    try {
-      if (!isSubscribed) return;
-      const [notifs, countData] = await Promise.all([
-        api.listNotifications(),
-        api.unreadNotifications(user.id),
-      ]);
-      setNotifications(notifs.slice(0, 10));
-      setUnreadCount(countData);
-    } catch {
-      // silently fail
-    }
-  }
-
-  async function handleSubscribe() {
-    if (user?.id) {
-      await subscribe(user.id);
-      await fetchNotifications();
-    }
-  }
-
-  async function markAsRead(id: string) {
-    try {
-      await api.markAsReadNotifications(id);
-      await fetchNotifications();
-    } catch {
-      // silently fail
-    }
-  }
-
-  async function markAllRead() {
-    try {
-      await api.markAsReadNotifications();
-      await fetchNotifications();
-    } catch {
-      // silently fail
-    }
-  }
-
-  async function deleteNotification(id: string, e: React.MouseEvent) {
-    e.stopPropagation(); // Stop click from triggering item layout events
-    try {
-      await api.deleteNotification(id);
-      await fetchNotifications();
-    } catch {
-      // silently fail
-    }
-  }
-
-  function toggleNotifications() {
-    const nextState = !showNotifications;
-    setShowNotifications(nextState);
-    if (nextState) {
-      fetchNotifications();
-    }
-  }
-
-  const eventColors: Record<string, string> = {
-    new_application: "bg-teal-50 text-teal-700",
-    new_subscriber: "bg-blue-50 text-blue-700",
-    new_message: "bg-amber-50 text-amber-700",
-    application_status_change: "bg-green-50 text-green-700",
-  };
-
-  const getEventIcon = (eventType: EventType) => {
-    switch (eventType) {
-      case "new_application":
-        return <Briefcase size={14} />;
-      case "new_subscriber":
-        return <MailOpen size={14} />;
-      case "new_message":
-        return <Mail size={14} />;
-      default:
-        return <FileText size={14} />;
-    }
-  };
-
-  // --- Fixed Effect lifecycle hooks ---
-  useEffect(() => {
-    let pollInterval: ReturnType<typeof setInterval> | null = null;
-
-    async function initNotifications() {
-      if (isSupported) {
-        await checkSubscriptionStatus();
-      }
-      await fetchNotifications();
-      pollInterval = setInterval(fetchNotifications, 30000);
-    }
-
-    initNotifications();
-
-    return () => {
-      if (pollInterval) clearInterval(pollInterval);
-    };
-  }, [isSupported, isSubscribed]);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -363,104 +258,62 @@ export function Header() {
             </Link>
           </Button>
 
-          {/* Fixed React Notification Bell Dropdown layout */}
-          {isSubscribed ? (
-            <div className="relative">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleNotifications}
-                className="relative text-muted-foreground hover:text-foreground"
-              >
-                <Bell className="h-5 w-5" />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-destructive text-destructive-foreground text-[9px] font-bold rounded-full flex items-center justify-center">
-                    {unreadCount > 9 ? "9+" : unreadCount}
-                  </span>
-                )}
-              </Button>
-
-              {showNotifications && (
-                <>
-                  {/* Click outside backdrop layer wrapper */}
-                  <div
-                    className="fixed inset-0 z-40"
-                    onClick={() => setShowNotifications(false)}
-                  />
-
-                  <div className="absolute right-0 top-12 w-[calc(100vw-2rem)] sm:w-96 bg-popover text-popover-foreground rounded-xl border border-border shadow-xl z-50 overflow-hidden">
-                    <div className="flex items-center justify-between px-4 py-3 border-b border-border/60">
-                      <h3 className="text-sm font-bold">Notifications</h3>
-                      {unreadCount > 0 && (
-                        <button
-                          onClick={markAllRead}
-                          className="flex items-center gap-1 text-xs text-primary hover:underline transition-colors"
-                        >
-                          <CheckCheck size={12} /> Mark all read
-                        </button>
-                      )}
-                    </div>
-                    <div className="max-h-[60vh] sm:max-h-80 overflow-y-auto divide-y divide-border/40">
-                      {notifications.map((notif) => (
-                        <div
-                          key={notif.user_id}
-                          className={`px-4 py-3 hover:bg-muted/50 transition-colors cursor-pointer flex items-start gap-3 ${!notif.is_read ? "bg-muted/30" : ""}`}
-                          onClick={() => markAsRead(notif.user_id)}
-                        >
-                          <div
-                            className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs ${eventColors[notif.event_type] || "bg-muted text-muted-foreground"}`}
-                          >
-                            {getEventIcon(notif.event_type)}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium truncate">
-                              {notif.title}
-                            </div>
-                            <div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
-                              {notif.body}
-                            </div>
-                            <div className="text-[10px] text-muted-foreground/70 mt-1">
-                              {formatTime(notif.created_at)}
-                            </div>
-                          </div>
-                          <button
-                            onClick={(e) =>
-                              deleteNotification(notif.user_id, e)
-                            }
-                            className="p-1 text-muted-foreground/60 hover:text-destructive transition-colors shrink-0"
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        </div>
-                      ))}
-                      {notifications.length === 0 && (
-                        <div className="px-4 py-8 text-center text-muted-foreground text-sm">
-                          No notifications yet.
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
+          {/* Notification Flow */}
+          {isLoading ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              disabled
+              className="cursor-wait"
+            >
+              <LoaderCircle className="h-5 w-5 animate-spin text-muted-foreground" />
+            </Button>
+          ) : isSubscribed ? (
+            /* UPDATED: Dropdown interface used when already subscribed */
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-accent hover:text-accent/80"
+                >
+                  <BellRing className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <div className="flex items-center gap-2 px-2 py-1.5 text-xs text-muted-foreground">
+                  <Check className="h-3.5 w-3.5 text-green-500" />
+                  Notifications Enabled
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={unsubscribe}
+                  className="cursor-pointer text-destructive focus:text-destructive"
+                >
+                  <BellOff className="mr-2 h-4 w-4" />
+                  Unsubscribe
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : isSupported ? (
             <Button
               variant="ghost"
               size="icon"
-              onClick={handleSubscribe}
+              onClick={subscribe}
               className="text-muted-foreground hover:text-foreground"
+              title="Subscribe to notifications"
             >
-              <BellRing className="h-5 w-5" />
+              <Bell className="h-5 w-5" />
             </Button>
           ) : (
-            <div className="p-2 text-muted-foreground/40">
+            <Button variant="ghost" size="icon" disabled className="opacity-40">
               <BellOff className="h-5 w-5" />
-            </div>
+            </Button>
           )}
         </div>
       </div>
 
-      {/* Replaced raw custom Modal layouts with Radix/Shadcn UI standard Dialog context */}
+      {/* Permission Denied Modal */}
       <Dialog
         open={permissionStatus === "denied"}
         onOpenChange={(open) => !open && setPermissionStatus?.("default")}

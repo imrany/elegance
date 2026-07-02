@@ -23,37 +23,17 @@ type NotificationPayload struct {
 	Image              string         `json:"image,omitempty"`
 	Data               map[string]any `json:"data,omitempty"`
 	Tag                string         `json:"tag,omitempty"`
-	RequireInteraction bool           `json:"requireInteraction,omitempty"`
+	RequireInteraction bool           `json:"require_interaction,omitempty"`
 }
 
 // SendNotificationRequest for sending to specific users
 type SendNotificationRequest struct {
-	UserIDs []string            `json:"user_ids,omitempty"` // If empty, sends to all
-	Payload NotificationPayload `json:"payload"`
+	Endpoints []string            `json:"endpoints,omitempty"` // If empty, sends to all
+	Payload   NotificationPayload `json:"payload"`
 }
 
-// SubscribeToPushNotificationHandler - Subscribes user to push notifications
-func (s *Handler) SubscribeToPushNotificationHandler(c *gin.Context) {
-	userID := c.GetHeader("X-User-ID")
-	if userID == "" {
-		utils.SendResponse(c, utils.Response{
-			Status:  http.StatusUnauthorized,
-			Success: false,
-			Message: "user id required",
-		})
-		return
-	}
-
-	user, err := s.db.GetUserByID(userID)
-	if err != nil || user == nil {
-		utils.SendResponse(c, utils.Response{
-			Status:  http.StatusNotFound,
-			Success: false,
-			Message: "User not found",
-		})
-		return
-	}
-
+// SubscribeToPushNotification - Subscribes user to push notifications
+func (s *Handler) SubscribeToPushNotification(c *gin.Context) {
 	var sub models.WebPushSubscription
 	if err := c.ShouldBindJSON(&sub); err != nil {
 		utils.SendResponse(c, utils.Response{
@@ -65,7 +45,7 @@ func (s *Handler) SubscribeToPushNotificationHandler(c *gin.Context) {
 	}
 
 	// Validate subscription data
-	if sub.Endpoint == "" || sub.Keys.P256dh == "" || sub.Keys.Auth == "" {
+	if sub.Endpoint == "" || sub.P256dh == "" || sub.Auth == "" {
 		utils.SendResponse(c, utils.Response{
 			Status:  http.StatusBadRequest,
 			Success: false,
@@ -74,10 +54,8 @@ func (s *Handler) SubscribeToPushNotificationHandler(c *gin.Context) {
 		return
 	}
 
-	userAgent := c.GetHeader("User-Agent")
-
-	if err := s.db.CreateWebPushSubscription(userID, &sub, userAgent); err != nil {
-		slog.Error("Failed to save subscription", "user_id", userID, "error", err)
+	if err := s.db.CreateWebPushSubscription(&sub); err != nil {
+		slog.Error("Failed to save subscription", "error", err)
 		utils.SendResponse(c, utils.Response{
 			Status:  http.StatusInternalServerError,
 			Success: false,
@@ -86,7 +64,7 @@ func (s *Handler) SubscribeToPushNotificationHandler(c *gin.Context) {
 		return
 	}
 
-	slog.Info("Subscription saved successfully", "user_id", userID, "endpoint", sub.Endpoint)
+	slog.Info("Subscription saved successfully", "endpoint", sub.Endpoint)
 
 	utils.SendResponse(c, utils.Response{
 		Status:  http.StatusCreated,
@@ -95,40 +73,9 @@ func (s *Handler) SubscribeToPushNotificationHandler(c *gin.Context) {
 	})
 }
 
-func (s *Handler) UnsubscribeToPushNotificationHandler(c *gin.Context) {
-	c.Header("Content-Type", "application/json")
-
-	userID := c.GetHeader("X-User-ID")
-	if userID == "" {
-		utils.SendResponse(c, utils.Response{
-			Status:  http.StatusUnauthorized,
-			Success: false,
-			Message: "user id required",
-		})
-		return
-	}
-
-	user, err := s.db.GetUserByID(userID)
-	if err != nil || user == nil {
-		utils.SendResponse(c, utils.Response{
-			Status:  http.StatusNotFound,
-			Success: false,
-			Message: "User not found",
-		})
-		return
-	}
-
-	var sub models.WebPushSubscription
-	if err := c.ShouldBindJSON(&sub); err != nil {
-		utils.SendResponse(c, utils.Response{
-			Status:  http.StatusBadRequest,
-			Success: false,
-			Message: "Invalid request body",
-		})
-		return
-	}
-
-	if err := s.db.DeleteSubscription(sub.Endpoint); err != nil {
+func (s *Handler) UnsubscribeToPushNotification(c *gin.Context) {
+	endpoint := c.Param("endpoint")
+	if err := s.db.DeleteSubscription(endpoint); err != nil {
 		slog.Error("Failed to delete subscription", "Error", err.Error())
 		utils.SendResponse(c, utils.Response{
 			Status:  http.StatusInternalServerError,
@@ -138,7 +85,7 @@ func (s *Handler) UnsubscribeToPushNotificationHandler(c *gin.Context) {
 		return
 	}
 
-	slog.Info("Subscription deleted", "details: ", sub.Endpoint)
+	slog.Info("Subscription deleted", "details: ", endpoint)
 	utils.SendResponse(c, utils.Response{
 		Status:  http.StatusOK,
 		Success: true,
@@ -146,17 +93,7 @@ func (s *Handler) UnsubscribeToPushNotificationHandler(c *gin.Context) {
 	})
 }
 
-func (s *Handler) SendPushNotificationHandler(c *gin.Context) {
-	userID := c.GetHeader("X-User-ID")
-	if userID == "" {
-		utils.SendResponse(c, utils.Response{
-			Status:  http.StatusUnauthorized,
-			Success: false,
-			Message: "user id required",
-		})
-		return
-	}
-
+func (s *Handler) SendPushNotification(c *gin.Context) {
 	var req SendNotificationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.SendResponse(c, utils.Response{
@@ -168,15 +105,17 @@ func (s *Handler) SendPushNotificationHandler(c *gin.Context) {
 	}
 
 	// Get subscriptions
-	subscriptions, err := s.db.GetSubscriptionsByUserIDs(req.UserIDs)
-	if err != nil {
-		slog.Error("Failed to get subscriptions", "Error", err)
-		utils.SendResponse(c, utils.Response{
-			Success: false,
-			Message: "Failed to get subscriptions",
-			Status:  http.StatusInternalServerError,
-		})
-		return
+	var subscriptions []models.PushSubscription
+	for _, e := range req.Endpoints {
+		subscription, err := s.db.GetSubscriptionByEndpoint(e)
+		if err != nil {
+			slog.Error("Failed to get subscriptions", "Error", err)
+			continue // Avoid crashing
+		}
+		// FIXED: Check for nil pointers to prevent application runtime panics
+		if subscription != nil {
+			subscriptions = append(subscriptions, *subscription)
+		}
 	}
 
 	if len(subscriptions) == 0 {
@@ -222,7 +161,7 @@ func (s *Handler) SendPushNotificationHandler(c *gin.Context) {
 		})
 
 		if err != nil {
-			slog.Info("Failed to send to notification", "Endpoint", sub.Endpoint, "Error", err, "Vapid Private Key", viper.GetString("VAPID_PRIVATE_KEY"), "request", req)
+			slog.Info("Failed to send notification", "Endpoint", sub.Endpoint, "Error", err, "request", req)
 			failureCount++
 			failedEndpoints = append(failedEndpoints, sub.Endpoint)
 
@@ -248,6 +187,7 @@ func (s *Handler) SendPushNotificationHandler(c *gin.Context) {
 		message = "Push notifications sent"
 	}
 	utils.SendResponse(c, utils.Response{
+		Status:  http.StatusOK, // Expressly specified standard status code
 		Success: successCount > 0,
 		Message: message,
 		Data: map[string]any{
@@ -258,19 +198,10 @@ func (s *Handler) SendPushNotificationHandler(c *gin.Context) {
 	})
 }
 
-// GetUserSubscriptionsHandler -  Get user subscriptions
-func (s *Handler) GetUserSubscriptionsHandler(c *gin.Context) {
-	userID := c.GetHeader("X-User-ID")
-	if userID == "" {
-		utils.SendResponse(c, utils.Response{
-			Success: false,
-			Message: "User ID required",
-			Status:  http.StatusUnauthorized,
-		})
-		return
-	}
-
-	subscriptions, err := s.db.GetSubscriptionsByUserID(userID)
+// GetSubscription -  Get subscriptions
+func (s *Handler) GetSubscription(c *gin.Context) {
+	endpoint := c.Param("endpoint")
+	subscription, err := s.db.GetSubscriptionByEndpoint(endpoint)
 	if err != nil {
 		log.Printf("Failed to get subscriptions: %v", err)
 		utils.SendResponse(c, utils.Response{
@@ -281,38 +212,28 @@ func (s *Handler) GetUserSubscriptionsHandler(c *gin.Context) {
 		return
 	}
 
+	// FIXED: Gracefully handle missing subscription check matching your database layer
+	if subscription == nil {
+		utils.SendResponse(c, utils.Response{
+			Status:  http.StatusNotFound,
+			Message: "Subscription not found",
+			Success: false,
+		})
+		return
+	}
+
 	utils.SendResponse(c, utils.Response{
+		Status:  http.StatusOK,
 		Success: true,
-		Message: "Subscriptions retrieved successfully",
-		Data:    subscriptions,
+		Message: "Subscription retrieved successfully",
+		Data:    subscription,
 	})
 }
 
-// VerifySubscriptionHandler - Verify if a subscription exists in the backend
-func (s *Handler) VerifySubscriptionHandler(c *gin.Context) {
-	userID := c.GetHeader("X-User-ID")
-	if userID == "" {
-		utils.SendResponse(c, utils.Response{
-			Status:  http.StatusUnauthorized,
-			Success: false,
-			Message: "User ID required",
-		})
-		return
-	}
-
-	var req struct {
-		Endpoint string `json:"endpoint"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.SendResponse(c, utils.Response{
-			Status:  http.StatusBadRequest,
-			Success: false,
-			Message: "Invalid request body",
-		})
-		return
-	}
-
-	if req.Endpoint == "" {
+// VerifySubscription - Verify if a subscription exists in the backend
+func (s *Handler) VerifySubscription(c *gin.Context) {
+	endpoint := c.Param("endpoint")
+	if endpoint == "" {
 		utils.SendResponse(c, utils.Response{
 			Status:  http.StatusBadRequest,
 			Success: false,
@@ -322,7 +243,7 @@ func (s *Handler) VerifySubscriptionHandler(c *gin.Context) {
 	}
 
 	// Check if subscription exists
-	exists, err := s.db.SubscriptionExists(req.Endpoint)
+	exists, err := s.db.SubscriptionExists(endpoint)
 	if err != nil {
 		slog.Error("Failed to verify subscription", "error", err)
 		utils.SendResponse(c, utils.Response{

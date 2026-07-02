@@ -1,11 +1,14 @@
 self.addEventListener("push", function (event) {
-  let data = {
-    // title: "Elegance",
-    // body: "New notification",
-    // icon: "/favicon.png",
-  };
+  console.log("Push event received:", event);
 
-  if (event.data) {
+  let data = {
+    body: "",
+  };
+  // Check if event has data
+  if (!event.data) {
+    console.error("Push event has no data");
+    return;
+  } else {
     try {
       data = event.data.json();
     } catch {
@@ -14,9 +17,14 @@ self.addEventListener("push", function (event) {
   }
 
   const options = {
-    body: data.body || "",
-    icon: data.icon || "/favicon.png", // The prompt's JSON structure does not explicitly include 'icon' at the root level, so this will default to '/favicon.png' unless 'icon' is added to the root of the incoming JSON payload.
-    badge: data.badge || "/favicon.png",
+    body: data.body || "You have a new notification",
+    icon: data.icon || "/favicon.svg",
+    badge: data.badge || "/logo.svg",
+    image: data.image || "",
+    actions: data.actions || [],
+    silent: false,
+    tag: data.tag || "default-tag",
+    requireInteraction: data.require_interaction || true,
     data: data.data || {},
     vibrate: [100, 50, 100],
   };
@@ -26,23 +34,28 @@ self.addEventListener("push", function (event) {
   );
 });
 
-self.addEventListener("notificationclick", function (event) {
+self.addEventListener("notificationclick", (event) => {
+  console.log("Notification clicked:", event.notification);
   event.notification.close();
 
-  const targetUrl = event.notification.data?.url || "/admin";
+  const link = event.notification.data.url || "/";
+  const action = event.action;
+
+  if (action) {
+    console.log("Action clicked:", action);
+  }
 
   event.waitUntil(
     clients
       .matchAll({ type: "window", includeUncontrolled: true })
-      .then(function (clientList) {
-        for (let i = 0; i < clientList.length; i++) {
-          const client = clientList[i];
-          if (client.url.includes("/admin") && "focus" in client) {
-            return client.focus();
-          }
-        }
-        if (clients.openWindow) {
-          return clients.openWindow(targetUrl);
+      .then((windowClients) => {
+        const matchingClient = windowClients.find(
+          (client) => client.url === link,
+        );
+        if (matchingClient) {
+          return matchingClient.focus();
+        } else {
+          return clients.openWindow(link);
         }
       }),
   );
