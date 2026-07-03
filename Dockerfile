@@ -3,25 +3,21 @@
 # -------------------------
 FROM node:20-alpine AS web-builder
 
-# Set the workdir to the root of the app context
-WORKDIR /app
+WORKDIR /app/web
 
 # Install pnpm globally once
 RUN npm install -g pnpm@9.12.3
 
 # Copy ONLY dependency locks first to leverage layer caching
-COPY web/package.json web/pnpm-lock.yaml ./web/
+COPY web/package.json web/pnpm-lock.yaml ./
 
-# Change to the web directory to install deps
-WORKDIR /app/web
+# Install dependencies
 RUN pnpm install --frozen-lockfile
 
-# Now copy the rest of the frontend source code into /app/web
+# Copy the rest of the frontend source code
 COPY web/ ./
 
 # Build the frontend for release mode
-# Note: Ensure your web build script config (vite.config.ts or similar)
-# is set to output outDir to "../dist"
 RUN pnpm run build
 
 # -------------------------
@@ -42,7 +38,8 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 # Copy all Go source code
 COPY . .
 
-# Pull the static frontend assets from Stage 1 into dist
+# Pull the static frontend assets from Stage 1 dist folder
+# Since outDir is set to '../dist' from '/app/web', it outputs to '/app/dist'
 COPY --from=web-builder /app/dist ./dist
 
 # Build the statically linked Go application
