@@ -21,8 +21,8 @@ COPY web/ ./
 
 # Build the frontend for release mode
 # Note: Ensure your web build script config (vite.config.ts or similar)
-# is set to output outDir to "../internal/router/dist"
-RUN pnpm run release
+# is set to output outDir to "../dist"
+RUN pnpm run build
 
 # -------------------------
 # Stage 2: Build the Go application
@@ -42,8 +42,8 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 # Copy all Go source code
 COPY . .
 
-# Pull the static frontend assets from Stage 1 into internal/router/dist
-COPY --from=web-builder /app/internal/router/dist ./internal/router/dist
+# Pull the static frontend assets from Stage 1 into dist
+COPY --from=web-builder /app/dist ./dist
 
 # Build the statically linked Go application
 ARG VERSION=dev
